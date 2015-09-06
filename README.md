@@ -1,2 +1,2 @@
 # Pi
-Rasp_Pi Competition 
+Raspy_Pi Competition 
