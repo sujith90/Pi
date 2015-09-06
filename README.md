@@ -1,2 +1,2 @@
 # Pi
-Boeing Rasp_Pi Competition 
+Rasp_Pi Competition 
