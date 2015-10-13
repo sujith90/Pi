@@ -40,11 +40,11 @@ for x in range(bytes_read):
    print(temperature_data[x]),
 #print 'done'
 
-#Need to chop off the first 3 bites, multiply each remaining pair
+#Need to chop off the first 2 bytes, multiply each remaining pair
 #by 256, convert to decimal, multiply by .1 then convert to Fahrenheit 
 #This is a sample of the data we get with this code
 #202 0 188 0 174 0 193 0 173 0 174 0 172 0 172 0 171 0 166 0 170 0 170 0 166 0 171 0 169 0 178 0 190 0 92 30
 for x in range(bytes_read):
 	if x > 3 and x<34 and x/2!=(x+1)/2:
-		hex_temp=(temperature_data[x]+temperature_data[x+1])*256 
-		print int(str(hex_temp), 16)*.1	
+		temp=temperature_data[x]+temperature_data[x+1]*256 
+		print temp*.1*(9/5)+32	
