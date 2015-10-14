@@ -1,26 +1,38 @@
-# External module imports
 import RPi.GPIO as GPIO
 import time
 
-# Pin Definitons:
-pwmPin = 17 # Broadcom pin 18 (P1 pin 12)
 
-dc = 50# duty cycle (0-100) for PWM pin
 
-# Pin Setup:
-GPIO.setmode(GPIO.BCM) # Broadcom pin-numbering scheme
-GPIO.setup(pwmPin, GPIO.OUT) # PWM pin set as output
-#pwm = GPIO.PWM(pwmPin, 50)  # Initialize PWM on pwmPin 100Hz frequency
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(18, GPIO.OUT)
 
-# Initial state for LEDs:
-#pwm.start(dc)
+p = GPIO.PWM(18, 0.5)
+p.start(1)
+input('Press return to stop:')   # use raw_input for Python 2
+p.stop()
+GPIO.cleanup()
 
-print("Here we go! Press CTRL+C to exit")
+
+
+'''
+import time
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(18, GPIO.OUT)
+
+p = GPIO.PWM(18, 50)  # channel=12 frequency=50Hz
+p.start(0)
 try:
     while 1:
-	#pwm.ChangeDutyCycle(dc)
-	GPIO.output(pwmPin, GPIO.HIGH)
-
-except KeyboardInterrupt: # If CTRL+C is pressed, exit cleanly:
-    #pwm.stop() # stop PWM
-    GPIO.cleanup() # cleanup all GPIO
+        for dc in range(0, 101, 5):
+            p.ChangeDutyCycle(dc)
+            time.sleep(0.1)
+        for dc in range(100, -1, -5):
+            p.ChangeDutyCycle(dc)
+            time.sleep(0.1)
+except KeyboardInterrupt:
+    pass
+p.stop()
+GPIO.cleanup()
+'''
