@@ -45,6 +45,7 @@ for x in range(bytes_read):
 #This is a sample of the data we get with this code
 #202 0 188 0 174 0 193 0 173 0 174 0 172 0 172 0 171 0 166 0 170 0 170 0 166 0 171 0 169 0 178 0 190 0 92 30
 for x in range(bytes_read):
-	if x > 2 and x<34 and x/2==(x+1)/2.:
+	if x > 1 and x<34 and x/2==(x+1)/2:
 		temp=temperature_data[x]+temperature_data[x+1]*256 
+		print x, x+1
 		print temp*.1*(9/5.)+32	
