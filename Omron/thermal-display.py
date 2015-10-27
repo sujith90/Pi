@@ -6,7 +6,7 @@ from pygame.locals import *
 
 omron = OmronD6T(arraySize=16)
 
-SCREEN_DIMS = [1000, 1000]
+SCREEN_DIMS = [500, 500]
 xSize = 4 
 ySize = 4 
 arraySize = xSize * ySize
@@ -24,7 +24,7 @@ square = []
 center = []
 rect = [Rect] * arraySize
 
-cellWidth = SCREEN_DIMS[0] / xSize
+cellWidth = (SCREEN_DIMS[0]) / xSize
 cellHeight = SCREEN_DIMS[1] / ySize
 cellWidthCenter = cellWidth / 2 
 if cellHeight > cellWidth:
@@ -58,7 +58,7 @@ person_detect = False
 
 text = font.render('Omron D6T Thermal Sensor', 1, (255,255,255))
 text_pos = text.get_rect()
-text_pos.center = (SCREEN_DIMS[0]/4,SCREEN_DIMS[1] - cellHeight - 18)
+text_pos.center = ((SCREEN_DIMS[0])/4,SCREEN_DIMS[1] - cellHeight - 18)
 screen.blit(text, text_pos)
 
 
@@ -82,12 +82,11 @@ while True:
     print(temperature[i],  i) 
     screen.fill(temp_to_rgb(temperature[i]), square[i])
     
-    text = font.render(str(i+1), 12, (255,255,255))
-    text_pos = text.get_rect()
-    text_pos.center = (center[i][0], SCREEN_DIMS[1] - cellHeight + 18)
-    screen.blit(text, text_pos)
-    
-    text = font.render(str(int(temperature[i])) + chr(0xb0) + "F", 1, (255,255,255))
+    #text = font.render(str(i+1), 12, (255,255,255))
+    #text_pos = text.get_rect()
+    #text_pos.center = (center[i][0], SCREEN_DIMS[1] - cellHeight + 18)
+    #screen.blit(text, text_pos)
+    text = font.render(str(int(temperature[i]))+" "+str(i+1) + chr(0xb0) + "F", 1, (255,255,255))
     text_pos = text.get_rect()
     text_pos.center = center[i]
     screen.blit(text, text_pos)
@@ -102,15 +101,15 @@ while True:
     person_detect = False
 
   if person_detect:    
-    screen.fill((0,0,0), (0,180,SCREEN_DIMS[0],180))
+    #screen.fill((0,0,0), (0,180,SCREEN_DIMS[0],180))
     screen.fill((255,0,0), (0,0,SCREEN_DIMS[0],180))
     text = font2.render('RESERVED', 1, (255,255,255))
     text_pos = text.get_rect()
     text_pos.center = (SCREEN_DIMS[0]/2,90)
     screen.blit(text, text_pos)
   else:
-    screen.fill((0,0,0), (0,180,SCREEN_DIMS[0],180))
-    screen.fill((0,192,0), (0,0,SCREEN_DIMS[0],180))
+    #screen.fill((0,0,0), (0,180,SCREEN_DIMS[0],180))
+    #screen.fill((0,192,0), (0,0,SCREEN_DIMS[0],180))
     text = font2.render('AVAILABLE', 1, (255,255,255))
     text_pos = text.get_rect()
     text_pos.center = (SCREEN_DIMS[0]/2,90)
