@@ -125,9 +125,12 @@ class Application(tk.Frame):
             formattedHour = returnTime.hour - 12
         else:
             formattedHour = returnTime.hour
+        if returnTime.minute < 10:
+            formattedMinute  = "0" + str(returnTime.minute)
+                
+        print(str(formattedMinute))
         
-        
-        self.breakPageMessage.config(text="Returns: {0}:{1}  ".format(formattedHour,returnTime.minute))
+        self.breakPageMessage.config(text="Returns: {0}:{1}  ".format(formattedHour,formattedMinute))
         
     
     #Switch from Main Screen to Break Screen
