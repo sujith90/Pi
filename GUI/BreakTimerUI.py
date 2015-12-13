@@ -14,8 +14,8 @@ class Page(tk.Frame):
         top=self.winfo_toplevel()
         top.rowconfigure(0,weight=1)
         top.columnconfigure(0,weight=1)
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0,weight=1)
+
+        
 
 
 class Application(tk.Frame):
@@ -27,7 +27,13 @@ class Application(tk.Frame):
         
         
         self.breakTimerInstance = BreakTimer() # instance of BreakTimer from BreakTimer.py
-        self.grid()
+        
+        self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
+              
+        
+        
+        
+        
         self.initCreateMainScreen()
         self.initCreateBreakScreen()
         
@@ -41,40 +47,52 @@ class Application(tk.Frame):
         #This method creates the Main Screen on initialization. The Main Screen remains displayed.
     def initCreateMainScreen(self):
 
-        
-        
+
         top=self.winfo_toplevel()
         top.rowconfigure(0,weight=1)
         top.columnconfigure(0,weight=1)
         
+        
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0,weight=1)
+        self.rowconfigure(1, weight=1)
+        self.columnconfigure(1,weight=1)
+        self.rowconfigure(2, weight=1)
+        self.columnconfigure(2,weight=1)        
+        self.rowconfigure(3, weight=1)
+        self.columnconfigure(3,weight=1)
+        self.rowconfigure(4, weight=1)
+        self.columnconfigure(4,weight=1)
+        self.rowconfigure(5, weight=1)
+        self.columnconfigure(5,weight=1)
+        self.rowconfigure(6, weight=1)
+        self.columnconfigure(6,weight=1)
         
 
         
         #Create and display Manual Override Checkbox
         self.manualOverrideCheckBox = tk.Checkbutton(self,text="Manual Override",command=self.toggleManualOverrideCheckBox)
-        self.manualOverrideCheckBox.grid(row=0,column=4)
+        self.manualOverrideCheckBox.grid(row=0,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
 
         
         
         #Create and hide Manual Indicator Checkbox.
         self.manualIndicatorCheckBox = tk.Checkbutton(self,text="Away",command=self.breakTimerInstance.togglePresenceIndicator)
-        self.manualIndicatorCheckBox.grid(row=1,column=4)
+        self.manualIndicatorCheckBox.grid(row=1,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
 
         self.manualIndicatorCheckBox.grid_remove()
         
         #Create and display text label (shows number of minutes input from numpad)
         self.textLabel = tk.Label(self,text=self.breakTimerInstance.displayString + " " + "mins")
-        self.textLabel.grid(row=0,columnspan=4)
+        self.textLabel.grid(row=0,columnspan=4,sticky=tk.N+tk.E+tk.S+tk.W)
 
         
         #Create and display Clear and Break Buttons
         self.clearButton = tk.Button(self,text="Clear",foreground="red",background="grey",command=self.clearTextLabel)
-        self.clearButton.grid(row=2,column=4)
+        self.clearButton.grid(row=2,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
         
         self.breakButton = tk.Button(self,text="Break!",foreground="green",background="grey",command=self.switchToBreakScreen)
-        self.breakButton.grid(row=3,column=4)
+        self.breakButton.grid(row=3,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
 
         
         #Create and display Number Pad
@@ -86,20 +104,20 @@ class Application(tk.Frame):
             if ii == 4:
                 self.aButton = tk.Button(self,text=str(kk),foreground="black",background="grey",command = partial(self.updateTextLabel,kk))
                 self.numpad.insert(kk,self.aButton)
-                self.numpad[kk].grid(row=ii,column=1)
+                self.numpad[kk].grid(row=ii,column=1,sticky=tk.N+tk.E+tk.S+tk.W)
                 kk+=1
     
             else:
                 for jj in range(0,3):
                     self.aButton = tk.Button(self,text=str(kk),foreground="black",background="grey",command = partial(self.updateTextLabel,kk))
                     self.numpad.insert(kk,self.aButton)
-                    self.numpad[kk].grid(row=ii,column=jj)
+                    self.numpad[kk].grid(row=ii,column=jj,sticky=tk.N+tk.E+tk.S+tk.W)
                     kk+=1
 
         
         #Create and display bottom note
         self.bottomNote = tk.Label(self,text="Note: Max input is 99 mins")
-        self.bottomNote.grid(row=6,columnspan=7)
+        self.bottomNote.grid(row=6,columnspan=7,sticky=tk.N+tk.E+tk.S+tk.W)
 
     #Create the Break Screen on initialization and hide it.
     #This means that on clicking "Break" the application merely hides the Main Screen and displays the Break Screen.
@@ -127,6 +145,8 @@ class Application(tk.Frame):
             formattedHour = returnTime.hour
         if returnTime.minute < 10:
             formattedMinute  = "0" + str(returnTime.minute)
+        else:
+            formattedMinute = str(returnTime.minute)
                 
         print(str(formattedMinute))
         
