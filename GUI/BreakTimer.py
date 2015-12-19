@@ -1,5 +1,6 @@
 import datetime as dt
 from math import ceil
+import time
 
 class BreakTimer():
 
@@ -11,18 +12,19 @@ class BreakTimer():
         self.textLengthErrorFlag = False
         self.returnTime = 0 #mins
         
+    #Clear's the display text
     def clearDisplay(self):
         self.textLengthErrorFlag = False
         self.displayString = "0"
         self.inputDisplayString = "0"
         
         
-        
+    #Logic to update display text
     def updateDisplayString(self,anInt):
         if self.displayString == "0":
             self.displayString = str(anInt)
         else:
-            if len(self.displayString) < 2:
+            if len(self.displayString) < 3: #999 is max number of minutes
                 self.displayString += str(anInt)
             else:
                 self.textLengthError = True
@@ -44,29 +46,6 @@ class BreakTimer():
                 self.manualPresenceIndicator = True
     
     
-#     def startBreak(self,breakLength,lock,isTimerDone,mainScreen,breakScreen):
-#         mainScreen.grid_forget()
-#         breakScreen.grid()
-#         clockStart = dt.datetime.now()
-#         clockExp = clockStart + dt.timedelta(minutes=int(breakLength))
-#         
-#         if breakLength == 0:
-#             isTimerDone = 1
-#         else:
-#             isTimerDone = 0
-#             
-#         #Check to see if time expired. If so, set flag.
-#         while isTimerDone == 0:
-#             clockCur = dt.datetime.now()
-#             clockRem = (clockExp - clockCur).total_seconds()
-#             breakLength = ceil(clockRem/60)
-#             print("clockRem: {0}".format(str(clockRem)))
-#             lock.acquire()
-#             print("ReturnTime: {0}".format(breakLength))
-#             lock.release()
-#             if clockRem <= 0:
-#                 isTimerDone = 1
-    
     def getReturnTime(self):
         return self.returnTime
     
@@ -74,7 +53,7 @@ class BreakTimer():
         return self.displayString
     
     def getManualOverrideCheck(self):
-            return self.manualOverrideFlag
+        return self.manualOverrideFlag
     
     def getManualPresenceIndicator(self):
         return self.manualPresenceIndicator
@@ -83,36 +62,17 @@ class BreakTimer():
         return self.textLengthErrorFlag
     
     
-        #**STUB METHOD**
-    def omronInput(self):
-        print "process omron data or read in omron data determination"
-        #logic, then call toggleLED
+    #Execute file that activates OMRON sensor
+    def doOMRON(self):
+        print("***Doing OMRON***")
+
+        #execfile("/Users/noebrito/OneDrive/Github_Pi/Omron/thermal-display.py")
+        
     
     #**STUB METHOD**
     def toggleLED(self):
         print "Toggle LED"
     
-    #**UTILITY METHODS**
-    
-    #remove unnecessary data
-    #input: 15:34:58.856000
-    #output: 15:34:58
-    
-    
-    
-#     def formatTime(self,time):
-#         aFlag = True #flag used to exit while loop
-#         ii = 0 #counter used to iterate through string
-#         formattedTime = "" #output of this utility function
-#         
-#         while(aFlag):
-#             if (str(time)[ii] != "."):
-#                 formattedTime+=str(time)[ii]
-#                 ii+=1
-#             else:
-#                 aFlag = False #exit while loop
-#         
-#         return formattedTime
-                
+
     
         
