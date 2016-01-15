@@ -1,8 +1,9 @@
 import Tkinter as tk
 from BreakTimer import BreakTimer
 from _functools import partial
-from multiprocessing import Process, Value, Lock
+import threading
 import datetime as dt
+
 
 
 class Page(tk.Frame):
@@ -22,29 +23,20 @@ class Application(tk.Frame):
     #This is the main application
     def __init__(self,master=None):
         
+        #Creates Main Frame
         tk.Frame.__init__(self, master)
+        self.grid(sticky=tk.N+tk.S+tk.E+tk.W) #Create main Grid of the application
         
-        
-        
+        global breakTimerInstance #This lets the object work in another thread
         self.breakTimerInstance = BreakTimer() # instance of BreakTimer from BreakTimer.py
         
-        self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
-              
-        
-        
-        
-        
+        #Create the screens
         self.initCreateMainScreen()
         self.initCreateBreakScreen()
         
-        
-        #**These were being used in attempt of multiprocessing. May or may not be needed, but leaving here for now.**
-        #self.breakLength = Value('i',int(self.breakTimerInstance.getDisplayString()))
-        #self.isTimerDone = Value('i',0)
-        #self.lock = Lock()
 
         
-        #This method creates the Main Screen on initialization. The Main Screen remains displayed.
+       #This method creates the Main Screen on initialization. The Main Screen remains displayed.
     def initCreateMainScreen(self):
 
 
@@ -91,7 +83,7 @@ class Application(tk.Frame):
         self.clearButton = tk.Button(self,text="Clear",foreground="red",background="grey",command=self.clearTextLabel)
         self.clearButton.grid(row=2,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
         
-        self.breakButton = tk.Button(self,text="Break!",foreground="green",background="grey",command=self.switchToBreakScreen)
+        self.breakButton = tk.Button(self,text="Break!",foreground="green",background="grey",command= lambda: threading.Thread(target=self.switchToBreakScreen).start())
         self.breakButton.grid(row=3,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
 
         
@@ -116,7 +108,7 @@ class Application(tk.Frame):
 
         
         #Create and display bottom note
-        self.bottomNote = tk.Label(self,text="Note: Max input is 99 mins")
+        self.bottomNote = tk.Label(self,text="Note: Max input is 999 mins")
         self.bottomNote.grid(row=6,columnspan=7,sticky=tk.N+tk.E+tk.S+tk.W)
 
     #Create the Break Screen on initialization and hide it.
@@ -148,7 +140,6 @@ class Application(tk.Frame):
         else:
             formattedMinute = str(returnTime.minute)
                 
-        print(str(formattedMinute))
         
         self.breakPageMessage.config(text="Returns: {0}:{1}  ".format(formattedHour,formattedMinute))
         
@@ -163,16 +154,9 @@ class Application(tk.Frame):
         clockExp = clockStart + dt.timedelta(minutes=int(self.breakLength))
         self.updateBreakScreenMessage(clockExp)
         
-        #print self.breakLength
-        #self.p = Process(target=self.breakTimerInstance.startBreak,args=(self.breakLength,self.lock,self.isTimerDone,self.breakPageMessage))
-        #self.p.start()
-        #self.p1 = Process(target=self.whileUpdateBreak)
-        #self.p1.start()
-        #self.breakTimerInstance.startBreak(self.breakLength,self.lock,self.isTimerDone,self,self.breakScreen)
-
-        
-        
-        
+        #Execute file to run the OMRON sensor. Need to implement logic so that execution ends when user
+        #is navigated back to main screen.   
+        self.breakTimerInstance.doOMRON()
     
     def switchToMainScreen(self):
         self.breakScreen.grid_forget() #Hide Break Screen
@@ -180,7 +164,7 @@ class Application(tk.Frame):
         self.clearTextLabel()
         self.breakLength = 0
         
-        
+
     
     def updateTextLabel(self,anInt):
         #Update displayString
