@@ -50,16 +50,16 @@ class Application(tk.Frame):
         #Initialize Settings
         self.breakTimerInstance.loadSettings()
         if self.breakTimerInstance.getIsSettingsDefault() != True:
+            print("DEBUG: Settings are not default!")
             self.savedSettings = self.breakTimerInstance.getSavedSettings()
-            self.settingsKeys = self.breakTimerInstance.getSettingsKeysList()
             index = 0
             for each in self.stringVarsDict:
-                self.stringVarsDict[each].set(self.savedSettings[self.settingsKeys[index]])
+                print(each)
+                self.stringVarsDict[each].set(self.savedSettings[each])
                 index+=1
+        else:
+            print("DEBUG: Settings are default.")
                 
-        
-        
-        
 
         
        #This method creates the Main Screen on initialization. The Main Screen remains displayed.
@@ -183,8 +183,10 @@ class Application(tk.Frame):
             self.leavingHourMB.menu.add_command(label=str(ii),command=partial(self.hourSelectedCommand,ii))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict = {"leavingHourMB" : self.leavingHourMB}
-        self.stringVarsDict = {"leavingHourStringVar" : self.leavingHourStringVar}        
+        #Can't call a function to set a key when initializing a dictionary in Python. The "returnHour" key is intended to match
+        #settingsReturnHourKey in BreakTimer.py
+        self.menuButtonsDict = {"returnHour" : self.leavingHourMB}
+        self.stringVarsDict = {"returnHour" : self.leavingHourStringVar}        
 
         #Create menu for user to select minute
         self.leavingMinStringVar = tk.StringVar()
@@ -200,8 +202,8 @@ class Application(tk.Frame):
         self.leavingMinMB.menu.add_command(label="30",command=partial(self.minSelectedCommand,"30"))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict["leavingMinMB"] = self.leavingMinMB
-        self.stringVarsDict["leavingMinStringVar"] = self.leavingMinStringVar
+        self.menuButtonsDict[self.breakTimerInstance.getReturnMinSettingsKey()] = self.leavingMinMB
+        self.stringVarsDict[self.breakTimerInstance.getReturnMinSettingsKey()] = self.leavingMinStringVar
 
         #Create menu for user to select period (AM or PM)
         self.leavingPeriodStringVar = tk.StringVar()
@@ -217,8 +219,8 @@ class Application(tk.Frame):
         self.leavingPeriodMB.menu.add_command(label="PM",command=partial(self.periodSelectedCommand,"PM"))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict["leavingPeriodMB"] = self.leavingPeriodMB
-        self.stringVarsDict["leavingPeriodStringVar"] = self.leavingPeriodStringVar
+        self.menuButtonsDict[self.breakTimerInstance.getReturnPeriodSettingsKey()] = self.leavingPeriodMB
+        self.stringVarsDict[self.breakTimerInstance.getReturnPeriodSettingsKey()] = self.leavingPeriodStringVar
         
 
         #Create menu for user to select configurable amount of minutes to alert user with specified leaving time
@@ -237,8 +239,8 @@ class Application(tk.Frame):
         self.timeWithinMB.menu.add_command(label="60 min",command=partial(self.timeWithinSelectedCommand,"60"))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict["timeWithinMB"] = self.timeWithinMB
-        self.stringVarsDict["timeWithinStringVar"] = self.timeWithinStringVar
+        self.menuButtonsDict[self.breakTimerInstance.getTimeWithinSettingsKey()] = self.timeWithinMB
+        self.stringVarsDict[self.breakTimerInstance.getTimeWithinSettingsKey()] = self.timeWithinStringVar
 
 
 
@@ -267,13 +269,6 @@ class Application(tk.Frame):
 
     def doSaveSettings(self):
         #update everything
-        
-        self.leavingHourMB.update_idletasks()
-        self.leavingMinMB.update_idletasks()
-        self.leavingPeriodMB.update_idletasks()
-        self.timeWithinMB.update_idletasks()
-        
-        #TESTING
         for menuButton in self.menuButtonsDict:
             print(menuButton)
             self.menuButtonsDict[menuButton].update_idletasks()

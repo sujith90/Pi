@@ -105,10 +105,21 @@ class BreakTimer():
     def getIsSettingsDefault(self):
         return self.isSettingsDefault
         
-    def getSettingsKeysList(self):
-        self.settingsKeysList = []
-        self.settingsKeysList = self.defaultSettings.keys()
-        return self.settingsKeysList
+        
+        
+    #Get Settings Keys
+    def getReturnHourSettingsKey(self):
+        return self.settingsReturnHourKey
+    
+    def getReturnMinSettingsKey(self):
+        return self.settingsReturnMinKey
+    
+    def getReturnPeriodSettingsKey(self):
+        return self.settingsReturnPeriodKey
+    
+    def getTimeWithinSettingsKey(self):
+        return self.settingsTimeWithinKey
+    
     
     def getSavedSettings(self):
         return self.savedSettings    
