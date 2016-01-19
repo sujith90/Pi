@@ -6,8 +6,20 @@ import datetime as dt
 
 
 
-class Page(tk.Frame):
+
+
+class BreakPage(tk.Frame):
     #This Page corresponds to the Break Screen
+    def __init__(self,master=None):
+        tk.Frame.__init__(self, master)
+        
+        self.grid()
+        top=self.winfo_toplevel()
+        top.rowconfigure(0,weight=1)
+        top.columnconfigure(0,weight=1)
+
+class SettingsPage(tk.Frame):
+    #This page corresponds to the Settings Screen
     def __init__(self,master=None):
         tk.Frame.__init__(self, master)
         
@@ -33,7 +45,21 @@ class Application(tk.Frame):
         #Create the screens
         self.initCreateMainScreen()
         self.initCreateBreakScreen()
+        self.initSettingsScreen()
         
+        #Initialize Settings
+        self.breakTimerInstance.loadSettings()
+        if self.breakTimerInstance.getIsSettingsDefault() != True:
+            print("DEBUG: Settings are not default!")
+            self.savedSettings = self.breakTimerInstance.getSavedSettings()
+            index = 0
+            for each in self.stringVarsDict:
+                print(each)
+                self.stringVarsDict[each].set(self.savedSettings[each])
+                index+=1
+        else:
+            print("DEBUG: Settings are default.")
+                
 
         
        #This method creates the Main Screen on initialization. The Main Screen remains displayed.
@@ -85,6 +111,10 @@ class Application(tk.Frame):
         
         self.breakButton = tk.Button(self,text="Break!",foreground="green",background="grey",command= lambda: threading.Thread(target=self.switchToBreakScreen).start())
         self.breakButton.grid(row=3,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
+        
+        #Button to navigate to Settings Page
+        self.settingsButton = tk.Button(self,text="Settings",command=self.switchToSettingsScreen)
+        self.settingsButton.grid(row=5,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
 
         
         #Create and display Number Pad
@@ -115,7 +145,7 @@ class Application(tk.Frame):
     #This means that on clicking "Break" the application merely hides the Main Screen and displays the Break Screen.
     def initCreateBreakScreen(self):
 
-        self.breakScreen = Page()
+        self.breakScreen = BreakPage()
         
         #Cancel Button
         self.breakPageCancelButton = tk.Button(self.breakScreen,text="Cancel",command=self.switchToMainScreen)
@@ -127,7 +157,131 @@ class Application(tk.Frame):
         
         #hide Break Screen
         self.breakScreen.grid_forget()
+
         
+        
+    def initSettingsScreen(self):
+    
+        self.settingsScreen = SettingsPage()
+        
+        #Create back button to navigate back to main screen
+        self.settingsPageBackButton = tk.Button(self.settingsScreen,text="Back",command = self.settingsSwitchToMainScreen)
+        self.settingsPageBackButton.grid(row=0,column=0)
+        
+        
+        #Create menu for user to select hour
+        self.leavingHourStringVar = tk.StringVar()
+        self.leavingHourStringVar.set("Hours")
+        
+        self.leavingHourMB = tk.Menubutton(self.settingsScreen,text = self.leavingHourStringVar,textvariable=self.leavingHourStringVar, relief = tk.RAISED)
+        self.leavingHourMB.grid(row=1, column=0)
+        
+        self.leavingHourMB.menu = tk.Menu(self.leavingHourMB,tearoff=0)
+        self.leavingHourMB["menu"] = self.leavingHourMB.menu
+        
+        for ii in range(1,13):
+            self.leavingHourMB.menu.add_command(label=str(ii),command=partial(self.hourSelectedCommand,ii))
+
+        #Add menu button and stringvar to dictionary
+        #Can't call a function to set a key when initializing a dictionary in Python. The "returnHour" key is intended to match
+        #settingsReturnHourKey in BreakTimer.py
+        self.menuButtonsDict = {"returnHour" : self.leavingHourMB}
+        self.stringVarsDict = {"returnHour" : self.leavingHourStringVar}        
+
+        #Create menu for user to select minute
+        self.leavingMinStringVar = tk.StringVar()
+        self.leavingMinStringVar.set("Mins")
+        
+        self.leavingMinMB = tk.Menubutton(self.settingsScreen,text = self.leavingMinStringVar,textvariable=self.leavingMinStringVar,relief=tk.RAISED)
+        self.leavingMinMB.grid(row=1,column=1)
+        
+        self.leavingMinMB.menu = tk.Menu(self.leavingMinMB,tearoff=0)
+        self.leavingMinMB["menu"] = self.leavingMinMB.menu
+
+        self.leavingMinMB.menu.add_command(label="00",command=partial(self.minSelectedCommand,"00"))
+        self.leavingMinMB.menu.add_command(label="30",command=partial(self.minSelectedCommand,"30"))
+
+        #Add menu button and stringvar to dictionary
+        self.menuButtonsDict[self.breakTimerInstance.getReturnMinSettingsKey()] = self.leavingMinMB
+        self.stringVarsDict[self.breakTimerInstance.getReturnMinSettingsKey()] = self.leavingMinStringVar
+
+        #Create menu for user to select period (AM or PM)
+        self.leavingPeriodStringVar = tk.StringVar()
+        self.leavingPeriodStringVar.set("Period")
+        
+        self.leavingPeriodMB = tk.Menubutton(self.settingsScreen,text = self.leavingPeriodStringVar,textvariable=self.leavingPeriodStringVar,relief=tk.RAISED)
+        self.leavingPeriodMB.grid(row=1,column = 2)
+        
+        self.leavingPeriodMB.menu = tk.Menu(self.leavingPeriodMB,tearoff=0)
+        self.leavingPeriodMB["menu"] = self.leavingPeriodMB.menu
+
+        self.leavingPeriodMB.menu.add_command(label="AM",command=partial(self.periodSelectedCommand,"AM"))
+        self.leavingPeriodMB.menu.add_command(label="PM",command=partial(self.periodSelectedCommand,"PM"))
+
+        #Add menu button and stringvar to dictionary
+        self.menuButtonsDict[self.breakTimerInstance.getReturnPeriodSettingsKey()] = self.leavingPeriodMB
+        self.stringVarsDict[self.breakTimerInstance.getReturnPeriodSettingsKey()] = self.leavingPeriodStringVar
+        
+
+        #Create menu for user to select configurable amount of minutes to alert user with specified leaving time
+        self.timeWithinStringVar = tk.StringVar()
+        self.timeWithinStringVar.set("Time Within")
+        
+        self.timeWithinMB = tk.Menubutton(self.settingsScreen,text=self.timeWithinStringVar,textvariable=self.timeWithinStringVar,relief=tk.RAISED)
+        self.timeWithinMB.grid(row=2,column=0)
+        
+        self.timeWithinMB.menu = tk.Menu(self.timeWithinMB,tearoff=0)
+        self.timeWithinMB["menu"] = self.timeWithinMB.menu
+        
+        self.timeWithinMB.menu.add_command(label="15 min",command=partial(self.timeWithinSelectedCommand,"15"))
+        self.timeWithinMB.menu.add_command(label="30 min",command=partial(self.timeWithinSelectedCommand,"30"))
+        self.timeWithinMB.menu.add_command(label="45 min",command=partial(self.timeWithinSelectedCommand,"45"))
+        self.timeWithinMB.menu.add_command(label="60 min",command=partial(self.timeWithinSelectedCommand,"60"))
+
+        #Add menu button and stringvar to dictionary
+        self.menuButtonsDict[self.breakTimerInstance.getTimeWithinSettingsKey()] = self.timeWithinMB
+        self.stringVarsDict[self.breakTimerInstance.getTimeWithinSettingsKey()] = self.timeWithinStringVar
+
+
+
+        #Create a SAVE button
+        self.saveSettingsButton = tk.Button(self.settingsScreen,text="Save",command=self.doSaveSettings)
+        self.saveSettingsButton.grid(row=2,column=2)
+
+
+        #Hide Settings Screen
+        self.settingsScreen.grid_forget()
+        
+    #This function executes when the user selects an hour
+    def hourSelectedCommand(self,hourSelected):
+        self.leavingHourStringVar.set(str(hourSelected))
+        
+    #This function executes when the user selects a minute
+    def minSelectedCommand(self,minSelected):
+        self.leavingMinStringVar.set(minSelected)
+
+    #This function executes when the user selects a period
+    def periodSelectedCommand(self,periodSelected):
+        self.leavingPeriodStringVar.set(periodSelected)
+        
+    def timeWithinSelectedCommand(self,timeWithinSelected):
+        self.timeWithinStringVar.set(timeWithinSelected)
+
+    def doSaveSettings(self):
+        #update everything
+        for menuButton in self.menuButtonsDict:
+            print(menuButton)
+            self.menuButtonsDict[menuButton].update_idletasks()
+        
+        #save settings
+        self.breakTimerInstance.saveSettings(self.leavingHourStringVar.get(),
+                                             self.leavingMinStringVar.get(),
+                                             self.leavingPeriodStringVar.get(),
+                                             self.timeWithinStringVar.get())
+        
+
+
+
     #Message displayed on the Break Screen
     def updateBreakScreenMessage(self,returnTime):
         
@@ -143,6 +297,12 @@ class Application(tk.Frame):
         
         self.breakPageMessage.config(text="Returns: {0}:{1}  ".format(formattedHour,formattedMinute))
         
+        
+    def settingsSwitchToMainScreen(self):
+        self.settingsScreen.grid_forget() #Hide Settings Screen
+        self.grid() #Display Main Screen
+        self.clearTextLabel()
+        self.breakLength = 0
     
     #Switch from Main Screen to Break Screen
     def switchToBreakScreen(self):
@@ -164,6 +324,9 @@ class Application(tk.Frame):
         self.clearTextLabel()
         self.breakLength = 0
         
+    def switchToSettingsScreen(self):
+        self.grid_forget() #Hide Main Screen
+        self.settingsScreen.grid() #Display Settings Screen
 
     
     def updateTextLabel(self,anInt):
