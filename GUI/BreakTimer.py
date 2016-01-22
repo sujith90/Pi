@@ -8,7 +8,6 @@ class BreakTimer():
 
     def __init__(self):
         self.displayString              = "0"
-        self.manualOverrideFlag         = False
         self.manualPresenceIndicator    = False
         self.isTimeExpired              = False
         self.textLengthErrorFlag        = False
@@ -16,22 +15,22 @@ class BreakTimer():
         self.returnTime                 = 0 #mins
         
         #Settings Keys
-        self.settingsReturnHourKey      = "returnHour"
-        self.settingsReturnMinKey       = "returnMin"
-        self.settingsReturnPeriodKey    = "returnPeriod"
-        self.settingsTimeWithinKey      = "timeWithin"
+        self.settingsLeavingHourKey      = "leavingHour"
+        self.settingsLeavingMinKey       = "leavingMin"
+        self.settingsLeavingPeriodKey    = "leavingPeriod"
+        self.settingsTimeWithinKey       = "timeWithin"
         
         #Settings Default Values
-        self.settingsReturnHourDefault  = "5"
-        self.settingsReturnMinDefault   = "00"
-        self.settingsPeriodDefault      = "PM"
-        self.settingsTimeWithinDefault  = "15"
+        self.settingsLeavingHourDefault     = "5"
+        self.settingsLeavingMinDefault      = "00"
+        self.settingsLeavingPeriodDefault   = "PM"
+        self.settingsTimeWithinDefault      = "15"
         
         #Create dictionary for default settings
-        self.defaultSettings = { self.settingsReturnHourKey     : self.settingsReturnHourDefault,
-                                 self.settingsReturnMinKey      : self.settingsReturnMinDefault,
-                                 self.settingsReturnPeriodKey   : self.settingsPeriodDefault,
-                                 self.settingsTimeWithinKey     : self.settingsTimeWithinDefault
+        self.defaultSettings = { self.settingsLeavingHourKey     : self.settingsLeavingHourDefault,
+                                 self.settingsLeavingMinKey      : self.settingsLeavingMinDefault,
+                                 self.settingsLeavingPeriodKey   : self.settingsLeavingPeriodDefault,
+                                 self.settingsTimeWithinKey      : self.settingsTimeWithinDefault
             
             
         } 
@@ -40,24 +39,17 @@ class BreakTimer():
         
         #Load settings from settings.json. If the file does not exist, create settings.json.
         if (os.path.exists("/Users/noebrito/OneDrive/Github_Pi/GUI/settings.json")): #change path when run on Pi
-            
             with open("settings.json",'r') as settingsFile:
-            
                 self.savedSettings = json.loads(settingsFile.readline())
-                
                 if self.savedSettings != self.defaultSettings:
                     self.isSettingsDefault = False
-                    
         else: #Creates settings.json and loads with default settings
             with open("settings.json",'w') as settingsFile:
-                
                 settingsFile.write(json.dumps(self.defaultSettings)) #Python Dictionary --> JSON Object
 
     #Clear's the display text
     def clearDisplay(self):
-        self.textLengthErrorFlag = False
         self.displayString = "0"
-        self.inputDisplayString = "0"
         
         
     #Logic to update display text
@@ -67,25 +59,15 @@ class BreakTimer():
         else:
             if len(self.displayString) < 3: #999 is max number of minutes
                 self.displayString += str(anInt)
-            else:
-                self.textLengthError = True
                 
-    
-    def toggleManualOverrideFlag(self):
-        if self.manualOverrideFlag == False:
-            self.manualOverrideFlag = True
-        else:
-            self.manualOverrideFlag = False
         
     
     def togglePresenceIndicator(self):
-        #Only set if manualOverrideFlag is True
-        if self.manualOverrideFlag == True:
-            if self.manualPresenceIndicator == True:
-                self.manualPresenceIndicator = False
-            else:
-                self.manualPresenceIndicator = True
-    
+        if self.manualPresenceIndicator == True:
+            self.manualPresenceIndicator = False
+        else:
+            self.manualPresenceIndicator = True
+
     
     def getReturnTime(self):
         return self.returnTime
@@ -108,30 +90,42 @@ class BreakTimer():
         
         
     #Get Settings Keys
-    def getReturnHourSettingsKey(self):
-        return self.settingsReturnHourKey
+    def getLeavingHourSettingsKey(self):
+        return self.settingsLeavingHourKey
     
-    def getReturnMinSettingsKey(self):
-        return self.settingsReturnMinKey
+    def getLeavingMinSettingsKey(self):
+        return self.settingsLeavingMinKey
     
-    def getReturnPeriodSettingsKey(self):
-        return self.settingsReturnPeriodKey
+    def getLeavingPeriodSettingsKey(self):
+        return self.settingsLeavingPeriodKey
     
     def getTimeWithinSettingsKey(self):
         return self.settingsTimeWithinKey
     
-    
     def getSavedSettings(self):
-        return self.savedSettings    
+        return self.savedSettings
+        
+    def getDefaultSettings(self):
+        return self.defaultSettings
     
     
-    def saveSettings(self,returnHour,returnMin,returnPeriod,timeWithin):
+    def saveSettings(self,leavingHour,leavingMin,leavingPeriod,timeWithin):
+        
+        if leavingHour == "Hour":
+            leavingHour = self.settingsLeavingHourDefault
+        if leavingMin == "Min":
+            leavingMin = self.settingsLeavingMinDefault
+        if leavingPeriod == "Period":
+            leavingPeriod = self.settingsLeavingPeriodDefault
+        if timeWithin == "Time Within":
+            timeWithin = self.settingsTimeWithinDefault
+        
         
         #create dictionary with settings that are to be saved.
-        self.savedSettings = { self.settingsReturnHourKey       : returnHour,
-                                 self.settingsReturnMinKey      : returnMin,
-                                 self.settingsReturnPeriodKey   : returnPeriod,
-                                 self.settingsTimeWithinKey     : timeWithin
+        self.savedSettings = { self.settingsLeavingHourKey     : leavingHour,
+                               self.settingsLeavingMinKey      : leavingMin,
+                               self.settingsLeavingPeriodKey   : leavingPeriod,
+                               self.settingsTimeWithinKey      : timeWithin
         }
         
         
@@ -146,10 +140,11 @@ class BreakTimer():
 
         #execfile("/Users/noebrito/OneDrive/Github_Pi/Omron/thermal-display.py")
         
+    def activateLED(self):
+        print("Turn LED ON")
     
-    #**STUB METHOD**
-    def toggleLED(self):
-        print "Toggle LED"
+    def deactivateLED(self):
+        print("Turn LED OFF")
     
 
     
