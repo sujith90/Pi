@@ -9,7 +9,7 @@ import time
 
 
 
-class BreakPage(tk.Frame):
+class BreakScreen(tk.Frame):
     #This Page corresponds to the Break Screen
     def __init__(self,master=None):
         tk.Frame.__init__(self, master)
@@ -19,7 +19,7 @@ class BreakPage(tk.Frame):
         top.rowconfigure(0,weight=1)
         top.columnconfigure(0,weight=1)
 
-class SettingsPage(tk.Frame):
+class SettingsETSReminderScreen(tk.Frame):
     #This page corresponds to the Settings Screen
     def __init__(self,master=None):
         tk.Frame.__init__(self, master)
@@ -32,6 +32,14 @@ class SettingsPage(tk.Frame):
         # top.columnconfigure(1,weight=1)
         # top.rowconfigure(2,weight=1)
         # top.columnconfigure(2,weight=1)
+        
+class SettingsBreakReminderScreen(tk.Frame):
+    #This page corresponds to the second Settings Screen
+    def __init__(self,master=None):
+        tk.Frame.__init__(self,master)
+        
+        self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
+        top=self.winfo_toplevel()
 
 
 class Application(tk.Frame):
@@ -44,11 +52,19 @@ class Application(tk.Frame):
         
         global breakTimerInstance #This lets the object work in another thread
         self.breakTimerInstance = BreakTimer() # instance of BreakTimer from BreakTimer.py
+
+        
+        #Active screen flags
+        self.isMainScreenActive                     =   False
+        self.isBreakScreenActive                    =   False
+        self.isSettingsETSScreenActive              =   False
+        self.isSettingsBreakReminderScreenActive    =   False
         
         #Create the screens
         self.initCreateMainScreen()
         self.initCreateBreakScreen()
-        self.initSettingsScreen()
+        self.initSettingsETSReminderScreen()
+        self.initSettingsBreakReminderScreen()
         
         #Initialize Settings
         self.breakTimerInstance.loadSettings()
@@ -63,8 +79,9 @@ class Application(tk.Frame):
             
         self.t = threading.Thread(group=None,target=self.etsSignedService)
         self.t.start()
-                
-
+        
+        self.breakReminderServiceThread = threading.Thread(group=None,target=self.breakReminderService)
+        self.breakReminderServiceThread.start()
         
        #This method creates the Main Screen on initialization. The Main Screen remains displayed.
     def initCreateMainScreen(self):
@@ -129,7 +146,7 @@ class Application(tk.Frame):
         self.etsSignedCheckBox.grid(row=5,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
         
         #Button to navigate to Settings Page
-        self.settingsButton = tk.Button(self,text="Settings",command=self.switchToSettingsScreen,width=5)
+        self.settingsButton = tk.Button(self,text="Settings",command=self.switchToSettingsETSReminderScreen,width=5)
         self.settingsButton.grid(row=5,columnspan=2)
 
         
@@ -150,12 +167,14 @@ class Application(tk.Frame):
                     self.numpad[kk].grid(row=ii,column=jj,sticky=tk.N+tk.E+tk.S+tk.W)
                     kk+=1
 
+        #Set active screen flag
+        self.isMainScreenActive = True
         
     #Create the Break Screen on initialization and hide it.
     #This means that on clicking "Break" the application merely hides the Main Screen and displays the Break Screen.
     def initCreateBreakScreen(self):
 
-        self.breakScreen = BreakPage()
+        self.breakScreen = BreakScreen()
         
         #Cancel Button
         self.breakPageCancelButton = tk.Button(self.breakScreen,text="Cancel",command=self.switchToMainScreen)
@@ -169,35 +188,45 @@ class Application(tk.Frame):
         self.breakScreen.grid_forget()
 
         
-        
-    def initSettingsScreen(self):
+    #Create and hide ETS Reminder Settings Screen
+    def initSettingsETSReminderScreen(self):
     
-        self.settingsScreen = SettingsPage()
+        self.settingsETSReminderScreen = SettingsETSReminderScreen()
         
-        self.settingsLabelFrame = tk.LabelFrame(self.settingsScreen,text="ETS Reminder")
-        self.settingsLabelFrame.grid(row=1)
+        #Create Label Frame to enclose the settings options.
+        self.etsReminderLabelFrame = tk.LabelFrame(self.settingsETSReminderScreen,
+                                                   text="ETS Reminder Settings")
+        self.etsReminderLabelFrame.grid(row=1)
         
         #Create back button to navigate back to main screen
-        self.settingsPageBackButton = tk.Button(self.settingsScreen,
-                                                text="< Back",
-                                                command = self.settingsSwitchToMainScreen)
-        self.settingsPageBackButton.grid(row=0,column=0,sticky=tk.W)
+        self.backButton = tk.Button(self.settingsETSReminderScreen,
+                                    text="< Back",
+                                    command=self.switchToMainScreen)
+        self.backButton.grid(row=0,column=0,sticky=tk.W)
+        
+        #Create forward button that navigates to next settings screen
+        self.forwardButton = tk.Button(self.settingsETSReminderScreen,
+                                       text="Next >",
+                                       command=self.switchToSettingsBreakReminderScreen)
+        self.forwardButton.grid(row=0,column=2)
         
         
         #Create menu for user to select hour
         self.leavingHourStringVar = tk.StringVar()
         self.leavingHourStringVar.set("Hour")
         
-        self.leavingHourMB = tk.Menubutton(self.settingsLabelFrame,
+        self.leavingHourMB = tk.Menubutton(self.etsReminderLabelFrame,
                                            text = self.leavingHourStringVar,
                                            textvariable=self.leavingHourStringVar,
                                            relief = tk.RAISED,
                                            width=6)
         self.leavingHourMB.grid(row=1, columnspan=2,sticky=tk.W)
         
+        #Link menu to menubutton
         self.leavingHourMB.menu = tk.Menu(self.leavingHourMB,tearoff=0)
         self.leavingHourMB["menu"] = self.leavingHourMB.menu
-        
+
+        #Add menu options
         for ii in range(1,13):
             self.leavingHourMB.menu.add_command(label=str(ii),command=partial(self.hourSelectedCommand,ii))
 
@@ -211,77 +240,131 @@ class Application(tk.Frame):
         self.leavingMinStringVar = tk.StringVar()
         self.leavingMinStringVar.set("Min")
         
-        self.leavingMinMB = tk.Menubutton(self.settingsLabelFrame,
+        self.leavingMinMB = tk.Menubutton(self.etsReminderLabelFrame,
                                           text = self.leavingMinStringVar,
                                           textvariable=self.leavingMinStringVar,
                                           relief=tk.RAISED,
                                           width=6)
         self.leavingMinMB.grid(row=2,columnspan=2,sticky=tk.W)
         
+        #Link menu to menubutton
         self.leavingMinMB.menu = tk.Menu(self.leavingMinMB,tearoff=0)
         self.leavingMinMB["menu"] = self.leavingMinMB.menu
-
+        
+        #Add menu options
         self.leavingMinMB.menu.add_command(label="00",command=partial(self.minSelectedCommand,"00"))
         self.leavingMinMB.menu.add_command(label="15",command=partial(self.minSelectedCommand,"15"))
         self.leavingMinMB.menu.add_command(label="30",command=partial(self.minSelectedCommand,"30"))
         self.leavingMinMB.menu.add_command(label="45",command=partial(self.minSelectedCommand,"45"))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict[self.breakTimerInstance.getLeavingMinSettingsKey()] = self.leavingMinMB
-        self.stringVarsDict[self.breakTimerInstance.getLeavingMinSettingsKey()] = self.leavingMinStringVar
+        self.menuButtonsDict[self.breakTimerInstance.getSettingsLeavingMinSettingsKey()] = self.leavingMinMB
+        self.stringVarsDict[self.breakTimerInstance.getSettingsLeavingMinSettingsKey()] = self.leavingMinStringVar
 
         #Create menu for user to select period (AM or PM)
         self.leavingPeriodStringVar = tk.StringVar()
         self.leavingPeriodStringVar.set("Period")
         
-        self.leavingPeriodMB = tk.Menubutton(self.settingsLabelFrame,
+        self.leavingPeriodMB = tk.Menubutton(self.etsReminderLabelFrame,
                                              text = self.leavingPeriodStringVar,
                                              textvariable=self.leavingPeriodStringVar,
                                              relief=tk.RAISED)
         self.leavingPeriodMB.grid(row=3,columnspan=2,sticky=tk.W)
-        
+
+        #Link menu to menubutton
         self.leavingPeriodMB.menu = tk.Menu(self.leavingPeriodMB,tearoff=0)
         self.leavingPeriodMB["menu"] = self.leavingPeriodMB.menu
 
+        #Add menu options
         self.leavingPeriodMB.menu.add_command(label="AM",command=partial(self.periodSelectedCommand,"AM"))
         self.leavingPeriodMB.menu.add_command(label="PM",command=partial(self.periodSelectedCommand,"PM"))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict[self.breakTimerInstance.getLeavingPeriodSettingsKey()] = self.leavingPeriodMB
-        self.stringVarsDict[self.breakTimerInstance.getLeavingPeriodSettingsKey()] = self.leavingPeriodStringVar
+        self.menuButtonsDict[self.breakTimerInstance.getSettingsLeavingPeriodSettingsKey()] = self.leavingPeriodMB
+        self.stringVarsDict[self.breakTimerInstance.getSettingsLeavingPeriodSettingsKey()] = self.leavingPeriodStringVar
         
 
         #Create menu for user to select configurable amount of minutes to alert user with specified leaving time
         self.timeWithinStringVar = tk.StringVar()
         self.timeWithinStringVar.set("Time Within")
         
-        self.timeWithinMB = tk.Menubutton(self.settingsLabelFrame,
+        self.timeWithinMB = tk.Menubutton(self.etsReminderLabelFrame,
                                           text=self.timeWithinStringVar,
                                           textvariable=self.timeWithinStringVar,
                                           relief=tk.RAISED)
         self.timeWithinMB.grid(row=4,columnspan=2,sticky=tk.W)
         
+        #Link menu to menubutton
         self.timeWithinMB.menu = tk.Menu(self.timeWithinMB,tearoff=0)
         self.timeWithinMB["menu"] = self.timeWithinMB.menu
-        
+
+        #Add menu options
         self.timeWithinMB.menu.add_command(label="15 min",command=partial(self.timeWithinSelectedCommand,"15"))
         self.timeWithinMB.menu.add_command(label="30 min",command=partial(self.timeWithinSelectedCommand,"30"))
         self.timeWithinMB.menu.add_command(label="45 min",command=partial(self.timeWithinSelectedCommand,"45"))
         self.timeWithinMB.menu.add_command(label="60 min",command=partial(self.timeWithinSelectedCommand,"60"))
 
         #Add menu button and stringvar to dictionary
-        self.menuButtonsDict[self.breakTimerInstance.getTimeWithinSettingsKey()] = self.timeWithinMB
-        self.stringVarsDict[self.breakTimerInstance.getTimeWithinSettingsKey()] = self.timeWithinStringVar
+        self.menuButtonsDict[self.breakTimerInstance.getSettingsTimeWithinSettingsKey()] = self.timeWithinMB
+        self.stringVarsDict[self.breakTimerInstance.getSettingsTimeWithinSettingsKey()] = self.timeWithinStringVar
 
 
 
         #Create a SAVE button
-        self.saveSettingsButton = tk.Button(self.settingsScreen,text="Save",command=self.doSaveSettings)
+        self.saveSettingsButton = tk.Button(self.settingsETSReminderScreen,text="Save",command=self.doSaveSettings)
         self.saveSettingsButton.grid(row=2,column=2)
 
 
         #Hide Settings Screen
-        self.settingsScreen.grid_forget()
+        self.settingsETSReminderScreen.grid_forget()
+        
+        
+    #Create and hide Break Reminder Settings Screen
+    def initSettingsBreakReminderScreen(self):
+        self.settingsBreakReminderScreen = SettingsBreakReminderScreen()
+        
+        #Create Label Frame to enclose the settings options.
+        self.breakReminderLabelFrame = tk.LabelFrame(self.settingsBreakReminderScreen,
+                                                     text="Break Reminder Settings")
+        self.breakReminderLabelFrame.grid(row=1)
+        
+        #Create back button to navigate back to ETS Reminder Settings Screen
+        self.backButton = tk.Button(self.settingsBreakReminderScreen,
+                                    text="< Back",
+                                    command=self.switchToSettingsETSReminderScreen)
+        self.backButton.grid(row=0,column=0,sticky=tk.W)
+        
+        #Create menu for user to select number of minutes for break reminder
+        self.breakReminderMinutesStringVar = tk.StringVar()
+        self.breakReminderMinutesStringVar.set("Min")
+        
+        self.breakReminderMB = tk.Menubutton(self.breakReminderLabelFrame,
+                                                text=self.breakReminderMinutesStringVar,
+                                                textvariable=self.breakReminderMinutesStringVar,
+                                                relief=tk.RAISED,
+                                                width=6)
+        self.breakReminderMB.grid(row=1,columnspan=2,stick=tk.W)
+        
+        #Link menu to menubutton
+        self.breakReminderMB.menu = tk.Menu(self.breakReminderMB,tearoff=0)
+        self.breakReminderMB["menu"] = self.breakReminderMB.menu
+        
+        #Add menu options
+        self.breakReminderMB.menu.add_command(label="15",command=partial(self.breakReminderMinSelectedCommand,"15"))
+        self.breakReminderMB.menu.add_command(label="30",command=partial(self.breakReminderMinSelectedCommand,"30"))
+        self.breakReminderMB.menu.add_command(label="45",command=partial(self.breakReminderMinSelectedCommand,"45"))
+        self.breakReminderMB.menu.add_command(label="60",command=partial(self.breakReminderMinSelectedCommand,"60"))
+        
+        #Add to menubar and string vars dictionaries
+        self.menuButtonsDict[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()] = self.breakReminderMB
+        self.stringVarsDict[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()] = self.breakReminderMinutesStringVar
+
+        #Create a SAVE button
+        self.saveSettingsButton = tk.Button(self.settingsBreakReminderScreen,text="Save",command=self.doSaveSettings)
+        self.saveSettingsButton.grid(row=2,column=2)
+
+        #Hide screen
+        self.settingsBreakReminderScreen.grid_forget()
         
     #This function executes when the user selects an hour
     def hourSelectedCommand(self,hourSelected):
@@ -307,9 +390,12 @@ class Application(tk.Frame):
         self.breakTimerInstance.saveSettings(self.leavingHourStringVar.get(),
                                              self.leavingMinStringVar.get(),
                                              self.leavingPeriodStringVar.get(),
-                                             self.timeWithinStringVar.get())
+                                             self.timeWithinStringVar.get(),
+                                             self.breakReminderMinutesStringVar.get())
         
-
+    def breakReminderMinSelectedCommand(self, minSelected):
+        self.breakReminderMinutesStringVar.set(minSelected)
+        
 
 
     #Message displayed on the Break Screen
@@ -329,14 +415,40 @@ class Application(tk.Frame):
         self.breakPageMessage.config(text="Returns: {0}:{1}  ".format(formattedHour,formattedMinute))
         
         
-    def settingsSwitchToMainScreen(self):
-        self.settingsScreen.grid_forget() #Hide Settings Screen
+    def switchToMainScreen(self):
+    
+        if self.isBreakScreenActive == True:
+            
+            #End OMRON
+            self.breakTimerInstance.endOMRON()
+            
+            self.breakScreen.grid_forget() #Hide Break Screen
+            self.isBreakScreenActive = False
+            
+            #Start BreakReminderService Thread again
+            self.breakReminderServiceThread = threading.Thread(group=None,target=self.breakReminderService)
+            self.breakReminderServiceThread.start()
+            
+        elif self.isSettingsETSScreenActive == True:
+            self.settingsETSReminderScreen.grid_forget() #Hide Settings Screen
+            self.isSettingsETSScreenActive = False
+
+        
         self.grid() #Display Main Screen
         self.clearTextLabel()
         self.breakLength = 0
+        self.isMainScreenActive = True
     
     #Switch from Main Screen to Break Screen
     def switchToBreakScreen(self):
+    
+        #Set BreakReminder Flag to end breakReminderService
+        self.breakReminderFlag = False
+    
+        #Update active screen flags
+        self.isMainScreenActive     =   False
+        self.isBreakScreenActive    =   True
+    
         self.grid_forget() #Hide Main Screen
         self.breakScreen.grid() #Display Break Screen
         self.breakLength = int(self.breakTimerInstance.getDisplayString())
@@ -348,16 +460,29 @@ class Application(tk.Frame):
         #Execute file to run the OMRON sensor. Need to implement logic so that execution ends when user
         #is navigated back to main screen.   
         self.breakTimerInstance.doOMRON()
-    
-    def switchToMainScreen(self):
-        self.breakScreen.grid_forget() #Hide Break Screen
-        self.grid() #Display Main Screen
-        self.clearTextLabel()
-        self.breakLength = 0
         
-    def switchToSettingsScreen(self):
-        self.grid_forget() #Hide Main Screen
-        self.settingsScreen.grid() #Display Settings Screen
+    def switchToSettingsETSReminderScreen(self):
+        
+        if self.isMainScreenActive == True:
+            self.grid_forget() #Hide Main Screen
+            self.isMainScreenActive = False
+        elif self.isSettingsBreakReminderScreenActive == True:
+            self.settingsBreakReminderScreen.grid_forget() # Hide break reminder settings screen
+            self.isSettingsBreakReminderScreenActive = False
+
+        self.isSettingsETSScreenActive  =   True
+        self.settingsETSReminderScreen.grid() #Display ETS Reminder Settings Screen
+
+        
+    def switchToSettingsBreakReminderScreen(self):
+        
+        #Update active screen flags
+        self.isSettingsETSScreenActive              =   False
+        self.isSettingsBreakReminderScreenActive    =   True
+        
+        self.settingsETSReminderScreen.grid_forget() #Hide ETS Reminder Settings Screen
+        self.settingsBreakReminderScreen.grid() #Display Break Reminder Settings Screen
+        
 
     
     def updateTextLabel(self,anInt):
@@ -406,21 +531,22 @@ class Application(tk.Frame):
         self.currentDay = dt.datetime.now().day
         self.currentYear = dt.datetime.now().year
         
-        #Get leave time from settings.
-        if  self.savedSettings[self.breakTimerInstance.getLeavingPeriodSettingsKey()] == "PM":
-            self.leavingHourFormatted =  int(self.savedSettings[self.breakTimerInstance.getLeavingHourSettingsKey()]) + 12
-            self.leavingMinFormatted = self.savedSettings[self.breakTimerInstance.getLeavingMinSettingsKey()]
+        #Get ETS Reminder Configuration
+        self.savedSettings = self.breakTimerInstance.getSavedSettings() #getting latest settings
+        if  self.savedSettings[self.breakTimerInstance.getSettingsLeavingPeriodSettingsKey()] == "PM":
+            self.leavingHourFormatted =  int(self.savedSettings[self.breakTimerInstance.getSettingsLeavingHourSettingsKey()]) + 12
+            self.leavingMinFormatted = self.savedSettings[self.breakTimerInstance.getSettingsLeavingMinSettingsKey()]
             self.leavingTimeFormatted = str(self.leavingHourFormatted)+":"+self.leavingMinFormatted+":"+"00"+" "+str(self.currentMonth)+"-"+str(self.currentDay)+"-"+str(self.currentYear)
         else:
-            self.leavingHourFormatted = self.savedSettings[self.breakTimerInstance.getLeavingHourSettingsKey()]
-            self.leavingMinFormatted = self.savedSettings[self.breakTimerInstance.getLeavingMinSettingsKey()]
+            self.leavingHourFormatted = self.savedSettings[self.breakTimerInstance.getSettingsLeavingHourSettingsKey()]
+            self.leavingMinFormatted = self.savedSettings[self.breakTimerInstance.getSettingsLeavingMinSettingsKey()]
             self.leavingTimeFormatted = self.leavingHourFormatted+":"+self.leavingMinFormatted+":"+"00"+" "+str(self.currentMonth)+"-"+str(self.currentDay)+"-"+str(self.currentYear)
         
         #Create datetime object representing the user configured leaving time
         self.leavingTime = dt.datetime.strptime(self.leavingTimeFormatted,timeFormat)
         
         #Trigger time.
-        self.timeWithin = self.savedSettings[self.breakTimerInstance.getTimeWithinSettingsKey()]
+        self.timeWithin = self.savedSettings[self.breakTimerInstance.getSettingsTimeWithinSettingsKey()]
         self.timeWithinTimeDelta = dt.timedelta(minutes=int(self.timeWithin))
         self.triggerTime = self.leavingTime - self.timeWithinTimeDelta
 
@@ -429,23 +555,89 @@ class Application(tk.Frame):
             self.timeDelta = self.triggerTime-self.currentTime
 
             #print current time and trigger time
+            print(" ")
+            print("ETS REMINDER SERVICE.....")
             print("Settings Leaving Time: " + self.leavingTimeFormatted)
             print("Settings Time Within: " + str(self.timeWithin))
             print("Current Time: " + str(self.currentTime))
             print("Trigger Time: " + str(self.triggerTime))
-            print(" ")
+            print("Time Delta: " + str(self.timeDelta.days))
             
             if self.timeDelta.days < 0:
                 print("***Activate monkey if presence not detected***")
             else:
                 print("***Do not activate monkey if presence is not detected***")
-            print(" ")
+            print("ETS REMINDER SERVICE LOOP END.....")
             
             #Check every 15 seconds
-            time.sleep(15)
+            time.sleep(2)
         
         print("***ETS SIGNED***")
         
+    def breakReminderService(self):
+        #Get Break Reminder Configuration
+        self.savedSettings = self.breakTimerInstance.getSavedSettings() #getting latest settings
+        self.breakReminderMinutes = self.savedSettings[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()]
+        self.breakReminderTimeDelta = dt.timedelta(minutes=int(self.breakReminderMinutes))
+        # self.breakReminderTimeDelta = dt.timedelta(minutes=1) #only for demonstration purposes
+        self.breakReminderTriggerTime = dt.datetime.now() + self.breakReminderTimeDelta
+        
+        self.breakReminderFlag = True
+        while (self.breakReminderFlag):
+            self.breakReminderCurrentTime = dt.datetime.now()
+            self.breakReminderTimeDelta = self.breakReminderTriggerTime - self.breakReminderCurrentTime
+            
+            #Print Current Time and Trigger Time
+            print(" ")
+            print("BREAK REMINDER SERVICE.....")
+            print("Break Reminder Current Time: " + str(self.breakReminderCurrentTime))
+            print("Break Reminder Trigger Time: " + str(self.breakReminderTriggerTime))
+            print("Break Reminder Current Time Delta: " + str(self.breakReminderTimeDelta.days))
+            
+            if self.breakReminderTimeDelta.days < 0 and self.isMainScreenActive == True:
+                #Deactivate buttons on main screen
+                self.clearButton.config(state=tk.DISABLED)
+                self.clearButton.update_idletasks
+                self.breakButton.config(state=tk.DISABLED)
+                self.breakButton.update_idletasks()
+                self.settingsButton.config(state=tk.DISABLED)
+                self.settingsButton.update_idletasks()
+                for numpadButton in self.numpad:
+                    numpadButton.config(state=tk.DISABLED)
+                    numpadButton.update_idletasks()
+                print("***BREAK REMINDER ALERT***")
+                self.numpadTextStringVar.set("Take a break!")
+                self.numpadText.update_idletasks()
+                
+                for x in range(0,7):
+                    self.numpadTextStringVar.set("Now!")
+                    self.numpadText.update_idletasks()
+                    time.sleep(1)
+                    self.numpadTextStringVar.set("Take a break!")
+                    self.numpadText.update_idletasks()
+                    time.sleep(1)
+                self.numpadTextStringVar.set(self.breakTimerInstance.getDisplayString() + " " + "mins")
+                self.numpadText.update_idletasks()
+                
+                #Activate buttons on main screen
+                self.clearButton.config(state=tk.NORMAL)
+                self.clearButton.update_idletasks
+                self.breakButton.config(state=tk.NORMAL)
+                self.breakButton.update_idletasks()
+                self.settingsButton.config(state=tk.NORMAL)
+                self.settingsButton.update_idletasks()
+                for numpadButton in self.numpad:
+                    numpadButton.config(state=tk.NORMAL)
+                    numpadButton.update_idletasks()
+                self.breakReminderFlag = False
+            else:
+                print("***DO NOTHING***")
+            print("BREAK REMINDER SERVICE LOOP END.....")
+            
+            #Check every 1 second
+            time.sleep(2)
+            
+
         
     
 #main program starts here
