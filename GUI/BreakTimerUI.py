@@ -4,6 +4,7 @@ from _functools import partial
 import threading
 import datetime as dt
 import time
+import sys
 
 
 
@@ -19,8 +20,16 @@ class BreakScreen(tk.Frame):
         top.rowconfigure(0,weight=1)
         top.columnconfigure(0,weight=1)
 
+class SettingsGeneralSceen(tk.Frame):
+    #This page corresponds to the General Settings Screen
+    def __init__(self,master=None):
+        tk.Frame.__init__(self, master)
+        
+        self.grid(sticky=tk.N+tk.S+tk.E+tk.W)
+        top=self.winfo_toplevel()
+
 class SettingsETSReminderScreen(tk.Frame):
-    #This page corresponds to the Settings Screen
+    #This page corresponds to the ETS Reminder Settings Screen
     def __init__(self,master=None):
         tk.Frame.__init__(self, master)
         
@@ -34,7 +43,7 @@ class SettingsETSReminderScreen(tk.Frame):
         # top.columnconfigure(2,weight=1)
         
 class SettingsBreakReminderScreen(tk.Frame):
-    #This page corresponds to the second Settings Screen
+    #This page corresponds to the Break Reminder Settings Screen
     def __init__(self,master=None):
         tk.Frame.__init__(self,master)
         
@@ -45,7 +54,6 @@ class SettingsBreakReminderScreen(tk.Frame):
 class Application(tk.Frame):
     #This is the main application
     def __init__(self,master=None):
-        
         #Creates Main Frame
         tk.Frame.__init__(self, master)
         self.grid(sticky=tk.N+tk.S+tk.E+tk.W) #Create main Grid of the application
@@ -57,13 +65,18 @@ class Application(tk.Frame):
         #Active screen flags
         self.isMainScreenActive                     =   False
         self.isBreakScreenActive                    =   False
+        self.isSettingsGeneralScreenActive          =   False
         self.isSettingsETSScreenActive              =   False
         self.isSettingsBreakReminderScreenActive    =   False
+        
+        #Thread Exit flag
+        self.threadExit = False
         
         #Create the screens
         self.initCreateMainScreen()
         self.initCreateBreakScreen()
-        self.initSettingsETSReminderScreen()
+        self.initSettingsETSReminderScreen() #This function creates the dictionaries so it must go before the other Settings Screens
+        self.initSettingsGeneralScreen()
         self.initSettingsBreakReminderScreen()
         
         #Initialize Settings
@@ -76,6 +89,9 @@ class Application(tk.Frame):
                 index+=1
         else:
             self.savedSettings = self.breakTimerInstance.getDefaultSettings()
+            
+        if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] == "1":
+            self.monkeyCheckButton.select()
             
         self.t = threading.Thread(group=None,target=self.etsSignedService)
         self.t.start()
@@ -146,7 +162,7 @@ class Application(tk.Frame):
         self.etsSignedCheckBox.grid(row=5,column=4,sticky=tk.N+tk.E+tk.S+tk.W)
         
         #Button to navigate to Settings Page
-        self.settingsButton = tk.Button(self,text="Settings",command=self.switchToSettingsETSReminderScreen,width=5)
+        self.settingsButton = tk.Button(self,text="Settings",command=self.switchToSettingsGeneralScreen,width=5)
         self.settingsButton.grid(row=5,columnspan=2)
 
         
@@ -186,6 +202,48 @@ class Application(tk.Frame):
         
         #hide Break Screen
         self.breakScreen.grid_forget()
+        
+        
+    #Create and hide General Settings Screen
+    def initSettingsGeneralScreen(self):
+        self.settingsGeneralScreen = SettingsGeneralSceen()
+        
+        #Create Label Frame to enclose the settings options.
+        self.generalSettingsLabelFrame = tk.LabelFrame(self.settingsGeneralScreen,
+                                                       text="General Settings")
+        self.generalSettingsLabelFrame.grid(row=1)
+        
+        #Create back button to navigate back to main screen
+        self.backButton = tk.Button(self.settingsGeneralScreen,
+                                    text="< Back",
+                                    command=self.switchToMainScreen)
+        self.backButton.grid(row=0,column=0,sticky=tk.W)
+        
+        #Create forward button that navigates to ETS Reminder Settings Screen
+        self.forwardButton = tk.Button(self.settingsGeneralScreen,
+                                       text="Next >",
+                                       command=self.switchToSettingsETSReminderScreen)
+        self.forwardButton.grid(row=0,column=2)
+        
+        
+        #Create Checkbox to deactivate Monkey
+        self.deactivateMonkeyIntVar = tk.IntVar()
+        self.deactivateMonkeyStringVar = tk.StringVar()
+        self.monkeyCheckButton = tk.Checkbutton(self.generalSettingsLabelFrame,
+                                                text="Deactivate Monkey",
+                                                variable=self.deactivateMonkeyIntVar)
+        self.monkeyCheckButton.grid(row=1,columnspan=2,sticky=tk.W)
+        
+        #Add deactivateMonkeyIntVar to stringVarsDict
+        self.deactivateMonkeyStringVar.set(str(self.deactivateMonkeyIntVar.get()))
+        self.stringVarsDict[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] = self.deactivateMonkeyStringVar
+        #Create a SAVE button
+        self.saveSettingsButton = tk.Button(self.settingsGeneralScreen,text="Save",command=self.doSaveSettings)
+        self.saveSettingsButton.grid(row=2,column=2)
+        
+        
+        #Hide screen
+        self.settingsGeneralScreen.grid_forget()
 
         
     #Create and hide ETS Reminder Settings Screen
@@ -198,10 +256,10 @@ class Application(tk.Frame):
                                                    text="ETS Reminder Settings")
         self.etsReminderLabelFrame.grid(row=1)
         
-        #Create back button to navigate back to main screen
+        #Create back button to navigate back to General Settings Screen
         self.backButton = tk.Button(self.settingsETSReminderScreen,
                                     text="< Back",
-                                    command=self.switchToMainScreen)
+                                    command=self.switchToSettingsGeneralScreen)
         self.backButton.grid(row=0,column=0,sticky=tk.W)
         
         #Create forward button that navigates to next settings screen
@@ -386,8 +444,11 @@ class Application(tk.Frame):
         for menuButton in self.menuButtonsDict:
             self.menuButtonsDict[menuButton].update_idletasks()
         
+        self.deactivateMonkeyStringVar.set(str(self.deactivateMonkeyIntVar.get()))
+        
         #save settings
-        self.breakTimerInstance.saveSettings(self.leavingHourStringVar.get(),
+        self.breakTimerInstance.saveSettings(self.deactivateMonkeyStringVar.get(),
+                                             self.leavingHourStringVar.get(),
                                              self.leavingMinStringVar.get(),
                                              self.leavingPeriodStringVar.get(),
                                              self.timeWithinStringVar.get(),
@@ -429,9 +490,9 @@ class Application(tk.Frame):
             self.breakReminderServiceThread = threading.Thread(group=None,target=self.breakReminderService)
             self.breakReminderServiceThread.start()
             
-        elif self.isSettingsETSScreenActive == True:
-            self.settingsETSReminderScreen.grid_forget() #Hide Settings Screen
-            self.isSettingsETSScreenActive = False
+        elif self.isSettingsGeneralScreenActive == True:
+            self.settingsGeneralScreen.grid_forget() #Hide General Settings Screen
+            self.isSettingsGeneralScreenActive = False
 
         
         self.grid() #Display Main Screen
@@ -461,11 +522,23 @@ class Application(tk.Frame):
         #is navigated back to main screen.   
         self.breakTimerInstance.doOMRON()
         
-    def switchToSettingsETSReminderScreen(self):
-        
+    
+    def switchToSettingsGeneralScreen(self):
         if self.isMainScreenActive == True:
             self.grid_forget() #Hide Main Screen
             self.isMainScreenActive = False
+        elif self.isSettingsETSScreenActive == True:
+            self.settingsETSReminderScreen.grid_forget() #Hide ETS Reminder Settings Screen
+            self.isSettingsETSScreenActive = False
+            
+        self.isSettingsGeneralScreenActive = True
+        self.settingsGeneralScreen.grid() #Display General Settings Screen
+    
+    def switchToSettingsETSReminderScreen(self):
+        
+        if self.isSettingsGeneralScreenActive == True:
+            self.settingsGeneralScreen.grid_forget() #Hide General Settings Screen
+            self.isSettingsGeneralScreenActive = False
         elif self.isSettingsBreakReminderScreenActive == True:
             self.settingsBreakReminderScreen.grid_forget() # Hide break reminder settings screen
             self.isSettingsBreakReminderScreenActive = False
@@ -550,100 +623,122 @@ class Application(tk.Frame):
         self.timeWithinTimeDelta = dt.timedelta(minutes=int(self.timeWithin))
         self.triggerTime = self.leavingTime - self.timeWithinTimeDelta
 
-        while self.etsSignedIntVar.get() == 0:
-            self.currentTime = dt.datetime.now()
-            self.timeDelta = self.triggerTime-self.currentTime
+        try:
+            while self.etsSignedIntVar.get() == 0 and self.threadExit == False:
+                self.currentTime = dt.datetime.now()
+                self.timeDelta = self.triggerTime-self.currentTime
 
-            #print current time and trigger time
-            print(" ")
-            print("ETS REMINDER SERVICE.....")
-            print("Settings Leaving Time: " + self.leavingTimeFormatted)
-            print("Settings Time Within: " + str(self.timeWithin))
-            print("Current Time: " + str(self.currentTime))
-            print("Trigger Time: " + str(self.triggerTime))
-            print("Time Delta: " + str(self.timeDelta.days))
-            
-            if self.timeDelta.days < 0:
-                print("***Activate monkey if presence not detected***")
-            else:
-                print("***Do not activate monkey if presence is not detected***")
-            print("ETS REMINDER SERVICE LOOP END.....")
-            
-            #Check every 15 seconds
-            time.sleep(2)
+                #print current time and trigger time
+                print(" ")
+                print("ETS REMINDER SERVICE.....")
+                print("Settings Leaving Time: " + self.leavingTimeFormatted)
+                print("Settings Time Within: " + str(self.timeWithin))
+                print("Current Time: " + str(self.currentTime))
+                print("Trigger Time: " + str(self.triggerTime))
+                print("Time Delta: " + str(self.timeDelta.days))
+                
+                if self.timeDelta.days < 0:
+                    print("***Activate monkey if presence not detected***")
+                else:
+                    print("***Do not activate monkey if presence is not detected***")
+                print("ETS REMINDER SERVICE LOOP END.....")
+                
+                #Check every 15 seconds
+                time.sleep(2)
+        except:
+            self.threadExit = True
         
-        print("***ETS SIGNED***")
+        if self.threadExit == True:
+            print("THREAD TERMIANTED...")
+        else:
+            print("***ETS SIGNED***")
         
     def breakReminderService(self):
         #Get Break Reminder Configuration
         self.savedSettings = self.breakTimerInstance.getSavedSettings() #getting latest settings
-        self.breakReminderMinutes = self.savedSettings[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()]
+        if self.savedSettings[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()] == "Min":
+            self.breakReminderMinutes = "30"
+        else:
+            self.breakReminderMinutes = self.savedSettings[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()]
         self.breakReminderTimeDelta = dt.timedelta(minutes=int(self.breakReminderMinutes))
         # self.breakReminderTimeDelta = dt.timedelta(minutes=1) #only for demonstration purposes
         self.breakReminderTriggerTime = dt.datetime.now() + self.breakReminderTimeDelta
         
         self.breakReminderFlag = True
-        while (self.breakReminderFlag):
-            self.breakReminderCurrentTime = dt.datetime.now()
-            self.breakReminderTimeDelta = self.breakReminderTriggerTime - self.breakReminderCurrentTime
-            
-            #Print Current Time and Trigger Time
-            print(" ")
-            print("BREAK REMINDER SERVICE.....")
-            print("Break Reminder Current Time: " + str(self.breakReminderCurrentTime))
-            print("Break Reminder Trigger Time: " + str(self.breakReminderTriggerTime))
-            print("Break Reminder Current Time Delta: " + str(self.breakReminderTimeDelta.days))
-            
-            if self.breakReminderTimeDelta.days < 0 and self.isMainScreenActive == True:
-                #Deactivate buttons on main screen
-                self.clearButton.config(state=tk.DISABLED)
-                self.clearButton.update_idletasks
-                self.breakButton.config(state=tk.DISABLED)
-                self.breakButton.update_idletasks()
-                self.settingsButton.config(state=tk.DISABLED)
-                self.settingsButton.update_idletasks()
-                for numpadButton in self.numpad:
-                    numpadButton.config(state=tk.DISABLED)
-                    numpadButton.update_idletasks()
-                print("***BREAK REMINDER ALERT***")
-                self.numpadTextStringVar.set("Take a break!")
-                self.numpadText.update_idletasks()
+        try:
+            while (self.breakReminderFlag and self.threadExit == False):
+                self.breakReminderCurrentTime = dt.datetime.now()
+                self.breakReminderTimeDelta = self.breakReminderTriggerTime - self.breakReminderCurrentTime
                 
-                for x in range(0,7):
-                    self.numpadTextStringVar.set("Now!")
-                    self.numpadText.update_idletasks()
-                    time.sleep(1)
+                #Print Current Time and Trigger Time
+                print(" ")
+                print("BREAK REMINDER SERVICE.....")
+                print("Break Reminder Current Time: " + str(self.breakReminderCurrentTime))
+                print("Break Reminder Trigger Time: " + str(self.breakReminderTriggerTime))
+                print("Break Reminder Current Time Delta: " + str(self.breakReminderTimeDelta.days))
+                
+                if self.breakReminderTimeDelta.days < 0 and self.isMainScreenActive == True:
+                    #Deactivate buttons on main screen
+                    self.clearButton.config(state=tk.DISABLED)
+                    self.clearButton.update_idletasks
+                    self.breakButton.config(state=tk.DISABLED)
+                    self.breakButton.update_idletasks()
+                    self.settingsButton.config(state=tk.DISABLED)
+                    self.settingsButton.update_idletasks()
+                    for numpadButton in self.numpad:
+                        numpadButton.config(state=tk.DISABLED)
+                        numpadButton.update_idletasks()
+                    print("***BREAK REMINDER ALERT***")
                     self.numpadTextStringVar.set("Take a break!")
                     self.numpadText.update_idletasks()
-                    time.sleep(1)
-                self.numpadTextStringVar.set(self.breakTimerInstance.getDisplayString() + " " + "mins")
-                self.numpadText.update_idletasks()
+                    
+                    for x in range(0,7):
+                        self.numpadTextStringVar.set("Now!")
+                        self.numpadText.update_idletasks()
+                        time.sleep(1)
+                        self.numpadTextStringVar.set("Take a break!")
+                        self.numpadText.update_idletasks()
+                        time.sleep(1)
+                    self.numpadTextStringVar.set(self.breakTimerInstance.getDisplayString() + " " + "mins")
+                    self.numpadText.update_idletasks()
+                    
+                    #Activate buttons on main screen
+                    self.clearButton.config(state=tk.NORMAL)
+                    self.clearButton.update_idletasks
+                    self.breakButton.config(state=tk.NORMAL)
+                    self.breakButton.update_idletasks()
+                    self.settingsButton.config(state=tk.NORMAL)
+                    self.settingsButton.update_idletasks()
+                    for numpadButton in self.numpad:
+                        numpadButton.config(state=tk.NORMAL)
+                        numpadButton.update_idletasks()
+                    self.breakReminderFlag = False
+                else:
+                    print("***DO NOTHING***")
+                print("BREAK REMINDER SERVICE LOOP END.....")
                 
-                #Activate buttons on main screen
-                self.clearButton.config(state=tk.NORMAL)
-                self.clearButton.update_idletasks
-                self.breakButton.config(state=tk.NORMAL)
-                self.breakButton.update_idletasks()
-                self.settingsButton.config(state=tk.NORMAL)
-                self.settingsButton.update_idletasks()
-                for numpadButton in self.numpad:
-                    numpadButton.config(state=tk.NORMAL)
-                    numpadButton.update_idletasks()
-                self.breakReminderFlag = False
-            else:
-                print("***DO NOTHING***")
-            print("BREAK REMINDER SERVICE LOOP END.....")
-            
-            #Check every 1 second
-            time.sleep(2)
+                #Check every 1 second
+                time.sleep(2)
+        except:
+            self.threadExit = True
+        
+        if self.threadExit == True:
+            print("THREAD TERMINATED...")
             
 
         
     
 #main program starts here
 if __name__ == '__main__':
-    app = Application()
-    app.master.title('Presence Indicator')
-    app.mainloop() #starts application's main loop, waiting for mouse and keyboard events
+    
+    try:
+        app = Application()
+        app.master.title('Presence Indicator')
+        app.mainloop() #starts application's main loop, waiting for mouse and keyboard events
+    except RuntimeError:
+        app.threadExit = True
+        sys.exit()
+        print("I caught an exception")
+
         
         

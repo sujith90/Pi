@@ -15,6 +15,7 @@ class BreakTimer():
         self.returnTime                 = 0 #mins
         
         #Settings Keys
+        self.settingsDeactivateMonkeyKey        = "deactivateMonkeyFlag"
         self.settingsLeavingHourKey             = "leavingHour"
         self.settingsLeavingMinKey              = "leavingMin"
         self.settingsLeavingPeriodKey           = "leavingPeriod"
@@ -22,6 +23,7 @@ class BreakTimer():
         self.settingsBreakReminderMinutesKey    = "breakReminderMinutes"
         
         #Settings Default Values
+        self.settingsDeactivateMonkeyDefault         = "0"
         self.settingsLeavingHourDefault              = "5"
         self.settingsLeavingMinDefault               = "00"
         self.settingsLeavingPeriodDefault            = "PM"
@@ -29,7 +31,8 @@ class BreakTimer():
         self.settingsBreakReminderMinutesDefault     = "30"
         
         #Create dictionary for default settings
-        self.defaultSettings = { self.settingsLeavingHourKey            :   self.settingsLeavingHourDefault,
+        self.defaultSettings = { self.settingsDeactivateMonkeyKey       :   self.settingsDeactivateMonkeyDefault,
+                                 self.settingsLeavingHourKey            :   self.settingsLeavingHourDefault,
                                  self.settingsLeavingMinKey             :   self.settingsLeavingMinDefault,
                                  self.settingsLeavingPeriodKey          :   self.settingsLeavingPeriodDefault,
                                  self.settingsTimeWithinKey             :   self.settingsTimeWithinDefault,
@@ -89,6 +92,9 @@ class BreakTimer():
         
         
     #Get Settings Keys
+    def getSettingsDeactivateMonkeyKey(self):
+        return self.settingsDeactivateMonkeyKey
+    
     def getSettingsLeavingHourSettingsKey(self):
         return self.settingsLeavingHourKey
     
@@ -111,9 +117,11 @@ class BreakTimer():
         return self.defaultSettings
     
     
-    def saveSettings(self,leavingHour,leavingMin,leavingPeriod,timeWithin,breakReminderMinutes):
+    def saveSettings(self,deactivateMonkeyFlag,leavingHour,leavingMin,leavingPeriod,timeWithin,breakReminderMinutes):
         
         #Check if settings are default
+        if deactivateMonkeyFlag == "0":
+            deactivateMonkeyFlag = self.settingsDeactivateMonkeyDefault
         if leavingHour == "Hour":
             leavingHour = self.settingsLeavingHourDefault
         if leavingMin == "Min":
@@ -127,7 +135,8 @@ class BreakTimer():
         
         
         #create dictionary with settings that are to be saved.
-        self.savedSettings = { self.settingsLeavingHourKey              :   leavingHour,
+        self.savedSettings = { self.settingsDeactivateMonkeyKey         :   deactivateMonkeyFlag,
+                               self.settingsLeavingHourKey              :   leavingHour,
                                self.settingsLeavingMinKey               :   leavingMin,
                                self.settingsLeavingPeriodKey            :   leavingPeriod,
                                self.settingsTimeWithinKey               :   timeWithin,
