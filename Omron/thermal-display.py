@@ -8,18 +8,25 @@ import RPi.GPIO as GPIO
 
 omron = OmronD6T(arraySize=16)
 
-time_delay = .05
-temp_difference = 13
-
-
+time_delay = .1 #
+temp_difference = 10 # Temp difference bet
+prev_temp_diff =  0 #PID's I value
 
 #GPIO Initializers
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(18, GPIO.OUT)
 p = GPIO.PWM(18, 50)  # channel=12 frequency=50Hz
+dutycycle = 7
 p.start(0)
-p.ChangeDutyCycle(70.0/10.0)
-time.sleep(time_delay)
+
+for dc in range(20, 120, 10):
+	print "dc: ",dc/10.0
+	p.ChangeDutyCycle(dc/10.0)
+	time.sleep(.2)
+for dc in range(120, 70, -10):
+	print "dc: ",dc/10.0
+	p.ChangeDutyCycle(dc/10.0)
+	time.sleep(.2)
 
 SCREEN_DIMS = [500, 500]
 xSize = 4 
@@ -88,7 +95,6 @@ def Cell_One():
 #multiply  based on max-min
     setDutyCycle(row)
 
-
 def Cell_Two():
     row = [temperature[maxCell-1]]
     row.insert(1,temperature[maxCell])
@@ -112,25 +118,54 @@ def Cell_Four():
 
 def setDutyCycle(values):
     print "Temp Value Read: ", ["%.2f" % member for member in values]
-
-    if((max(values)-min(values)) > temp_difference):
-	multiplier = [values[0]-min(values),values[1]-min(values),values[2]-min(values),values[3]-min(values)]
+    m = 8 #sensitivity of change in temp 
+    prev_temp_diff = 0
+    if(((max(values)-min(values)) > temp_difference)):
+	'''
+	and (prev_temp_diff != (max(values)-min(values))). lockout break mechanism
+	'''
+	prev_temp_diff = (max(values)-min(values))
+	multiplier = [(values[0]-min(values))/m,(values[1]-min(values))/m,(values[2]-min(values))/m,(values[3]-min(values))/m]
+	print "multiplier: ", ["%.2f" % member for member in multiplier]
 	mValues = [multiplier[0]*values[0],multiplier[1]*values[1],multiplier[2]*values[2],multiplier[3]*values[3]]
+	print "mValues: ", ["%.2f" % member for member in mValues]
 	mulAvg  = sum(mValues)/len(mValues)
+	print "mulAvg: ", mulAvg
 	weightedValue = [mValues[0]/mulAvg, mValues[1]/mulAvg, mValues[2]/mulAvg, mValues[3]/mulAvg]
+	print "weightedValue: ", ["%.2f" % member for member in weightedValue]
 
-	ServoValues = [weightedValue[0]*5,weightedValue[1]*7,weightedValue[2]*8,weightedValue[3]*10]
+	ServoValues = [weightedValue[0]*1,weightedValue[1]*2,weightedValue[2]*3,weightedValue[3]*4]
+	print "ServoValues: ", ["%.2f" % member for member in ServoValues]
 
 	DC = sum(ServoValues)/len(ServoValues)
+
+	max_index = values.index(max(values))
+
+	print "\n"
+	print "DC: ", DC, "\n"
+	print "DutyCycle: ", dutycycle, "\n"
+	print "max_index: ", max_index, "\n"
+	print "\n"
+	global dutycycle
+
+	
+
+	if(DC > 3.00 and max_index != 1 and max_index != 2 ):
+		dutycycle = dutycycle + .1
+		p.ChangeDutyCycle(dutycycle)
+	elif(DC < 2.0 and max_index != 1 and max_index != 2 ):
+		dutycycle = dutycycle - .1
+		p.ChangeDutyCycle( dutycycle)
+	else:
+		print "\nCentered!\n"
+	time.sleep(.05)	
+	
+
     else:
     	print "Row: ", values, "\tMax-Min: ", (max(values)-min(values))
-	DC = 7.5
+	print "DC NOT CHANGED! ", "\n"
+	
 
-    p.ChangeDutyCycle(DC)
-    time.sleep(time_delay)
-
-    print "DC: ", DC, "\n"
-    
 
 # map the inputs to the function blocks
 function = {
@@ -141,7 +176,8 @@ function = {
 }
 
 while True:
-  for event in pygame.event.get():
+ prev_temp_diff = 0
+ for event in pygame.event.get():
     if event.type == QUIT:
       pygame.display.quit()
       sys.exit(0)
@@ -150,27 +186,26 @@ while True:
         pygame.display.quit()
         sys.exit(0)
 
-  bytes_read, temperature = omron.read()
+ bytes_read, temperature = omron.read()
+
   #Something is wrong with the room temp. It is much greater than the other cells
   #print omron.roomTemp
-  temp_hit = 0
-  maxCell = -1
-  for i in range(arraySize):
-    if temperature[i] >= 76:
+ temp_hit = 0
+ maxCell = -1
+ for i in range(arraySize):
+    if temperature[i] >= 75:
       temp_hit += 1
     
     #print(temperature[i],  i) 
     screen.fill(temp_to_rgb(temperature[i]), square[i])
     #Can this calculation be done before the loop? BP
-    if max(temperature) > 70:
+    if max(temperature) > 72.5:
 	    maxCell = temperature.index(max(temperature))
 	    #print ["%.2f" % member for member in temperature]
 	    #print maxCell, ": ", temperature[maxCell], "\n"
 	    print "\n"
 	    function[(maxCell+1)%4]()
-    else:
-	p.ChangeDutyCycle(7.0)
-	time.sleep(time_delay)
+
  
     
     
@@ -188,15 +223,15 @@ while True:
     screen.blit(text, text_pos)
   
   #Trigger Person Detection###############################################################
-  hit_time = time.time() - hit_start_time
+ hit_time = time.time() - hit_start_time
 
-  if temp_hit > 3:
+ if temp_hit > 3:
     person_detect = True
     hit_start_time = time.time()
-  elif temp_hit <= 3 and hit_time > 10:
+ elif temp_hit <= 3 and hit_time > 10:
     person_detect = False
 
-  if person_detect:    
+ if person_detect:    
     #screen.fill((0,0,0), (0,180,SCREEN_DIMS[0],180))
     #screen.fill((255,0,0), (0,0,SCREEN_DIMS[0],180))
     text = font2.render('RESERVED', 1, (255,255,255))
@@ -205,12 +240,12 @@ while True:
     screen.blit(text, text_pos)
     
 
-  else:
+ else:
     text = font2.render('AVAILABLE', 1, (255,255,255))
     text_pos = text.get_rect()
     text_pos.center = (SCREEN_DIMS[0]/2,90)
     screen.blit(text, text_pos)
     
 
-  pygame.display.update()
-  time.sleep(0.01)
+ pygame.display.update()
+ time.sleep(time_delay)
