@@ -5,8 +5,11 @@ import threading
 import datetime as dt
 import time
 import sys
-
-
+from thermaldisplay import Tracking
+from LedControl import LedControl
+from MonkeyControl import MonkeyControl
+import traceback
+import RPi.GPIO as GPIO
 
 
 
@@ -54,6 +57,7 @@ class SettingsBreakReminderScreen(tk.Frame):
 class Application(tk.Frame):
     #This is the main application
     def __init__(self,master=None):
+	print "GUI Init started...\n"
         #Creates Main Frame
         tk.Frame.__init__(self, master)
         self.grid(sticky=tk.N+tk.S+tk.E+tk.W) #Create main Grid of the application
@@ -69,8 +73,10 @@ class Application(tk.Frame):
         self.isSettingsETSScreenActive              =   False
         self.isSettingsBreakReminderScreenActive    =   False
         
-        #Thread Exit flag
-        self.threadExit = False
+        #All Thread Exit flag
+        self.allThreadExit = False
+
+	
         
         #Create the screens
         self.initCreateMainScreen()
@@ -93,16 +99,71 @@ class Application(tk.Frame):
         if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] == "1":
             self.monkeyCheckButton.select()
             
+
+	#Initialize LED Control Instance
+	global ledControlInstance
+	self.ledControlInstance = LedControl()
+	self.ledControlInstance.init()
+
+
+	print("LED TEST...")
+	time.sleep(3)
+	print("Red...")
+	self.ledControlInstance.ledOnRed()
+	time.sleep(2)
+	print("Green...")
+	self.ledControlInstance.ledOnGreen()
+	time.sleep(2)
+	print("Blue...")
+	self.ledControlInstance.ledOnBlue()
+	time.sleep(2)	
+	self.ledControlInstance.ledOff()
+	print("LED TEST END...")
+
+	
+	#Initialize Tracking Instance
+	global trackingInstance #This lets the object work in another thread
+        self.trackingInstance = Tracking() # instance of Tracking from thermaldisplay.py
+	self.trackingInstance.init_tracking()
+
+	#Initialize Monkey Control Instance
+	global monkeyControlInstance
+	self.monkeyControlInstance = MonkeyControl()
+	self.monkeyControlInstance.init()
+
+	'''
+	print("TEST MONKEY...")
+	time.sleep(3)
+	self.monkeyControlInstance.monkey_on()
+	time.sleep(3)
+	self.monkeyControlInstance.monkey_off()
+	print("TEST MONKEY END...")
+	'''
+
+	
+	
+
+	print "threads start..."
+
         self.t = threading.Thread(group=None,target=self.etsSignedService)
         self.t.start()
+
+
         
         self.breakReminderServiceThread = threading.Thread(group=None,target=self.breakReminderService)
         self.breakReminderServiceThread.start()
+	
+	
+	#Set LED to Green
+	self.ledControlInstance.ledOnGreen()	
+	
+	print "GUI Init finished!\n"
+	
+	
         
        #This method creates the Main Screen on initialization. The Main Screen remains displayed.
     def initCreateMainScreen(self):
-
-
+	
         top=self.winfo_toplevel()
         top.rowconfigure(0,weight=1)
         top.columnconfigure(0,weight=1)
@@ -248,7 +309,7 @@ class Application(tk.Frame):
         
     #Create and hide ETS Reminder Settings Screen
     def initSettingsETSReminderScreen(self):
-    
+  
         self.settingsETSReminderScreen = SettingsETSReminderScreen()
         
         #Create Label Frame to enclose the settings options.
@@ -440,6 +501,7 @@ class Application(tk.Frame):
         self.timeWithinStringVar.set(timeWithinSelected)
 
     def doSaveSettings(self):
+
         #Refresh menubar text.
         for menuButton in self.menuButtonsDict:
             self.menuButtonsDict[menuButton].update_idletasks()
@@ -495,10 +557,14 @@ class Application(tk.Frame):
             self.isSettingsGeneralScreenActive = False
 
         
+	
         self.grid() #Display Main Screen
         self.clearTextLabel()
         self.breakLength = 0
         self.isMainScreenActive = True
+
+	#Turn LED to Green
+	self.ledControlInstance.ledOnGreen()
     
     #Switch from Main Screen to Break Screen
     def switchToBreakScreen(self):
@@ -517,10 +583,16 @@ class Application(tk.Frame):
         clockStart = dt.datetime.now()
         clockExp = clockStart + dt.timedelta(minutes=int(self.breakLength))
         self.updateBreakScreenMessage(clockExp)
+
+	#Set LED to Red
+	self.ledControlInstance.ledOnRed()
         
+	'''
+	# ***NO LONGER VALID??? 2/13/2016***
         #Execute file to run the OMRON sensor. Need to implement logic so that execution ends when user
         #is navigated back to main screen.   
-        self.breakTimerInstance.doOMRON()
+        self.breakTimerInstance.doOMRON
+	'''
         
     
     def switchToSettingsGeneralScreen(self):
@@ -576,9 +648,9 @@ class Application(tk.Frame):
             self.clearButton.config(state=tk.DISABLED)
             self.breakButton.config(state=tk.DISABLED)
             self.settingsButton.config(state=tk.DISABLED)
+	    self.ledControlInstance.led_on() #LED ON
             for numpadButton in self.numpad:
                 numpadButton.config(state=tk.DISABLED)
-            self.breakTimerInstance.activateLED()
             
         else:
             #Away Checkbox is not active and all widgets on main screen are enabled and LED is off.
@@ -588,7 +660,7 @@ class Application(tk.Frame):
             self.settingsButton.config(state=tk.NORMAL)
             for numpadButton in self.numpad:
                 numpadButton.config(state=tk.NORMAL)
-            self.breakTimerInstance.deactivateLED()
+            self.ledControlInstance.led_off() #LED OFF
       
       
     def eventEtsSignedCheckbox(self):
@@ -598,7 +670,9 @@ class Application(tk.Frame):
       
     
     def etsSignedService(self):
-        timeFormat = "%H:%M:%S %m-%d-%Y"
+        
+	self.etsReminderThreadExit = False	
+	timeFormat = "%H:%M:%S %m-%d-%Y"
         
         self.currentMonth = dt.datetime.now().month
         self.currentDay = dt.datetime.now().day
@@ -624,11 +698,12 @@ class Application(tk.Frame):
         self.triggerTime = self.leavingTime - self.timeWithinTimeDelta
 
         try:
-            while self.etsSignedIntVar.get() == 0 and self.threadExit == False:
+            while self.etsSignedIntVar.get() == 0 and self.allThreadExit == False and self.etsReminderThreadExit == False:
                 self.currentTime = dt.datetime.now()
                 self.timeDelta = self.triggerTime-self.currentTime
-
+		
                 #print current time and trigger time
+		
                 print(" ")
                 print("ETS REMINDER SERVICE.....")
                 print("Settings Leaving Time: " + self.leavingTimeFormatted)
@@ -637,21 +712,60 @@ class Application(tk.Frame):
                 print("Trigger Time: " + str(self.triggerTime))
                 print("Time Delta: " + str(self.timeDelta.days))
                 
+
+
+
+
                 if self.timeDelta.days < 0:
                     print("***Activate monkey if presence not detected***")
+		    print("Presence Detected? " + str(self.trackingInstance.getPresenceInfo()))
+		    if self.trackingInstance.getPresenceInfo() == False:
+			#Don't activate monkey if configured in General Settings. Flash LEDs instead.
+
+			if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] == "1":
+				print("Monkey is deactivated in General Settings...")
+				for x in range(0,10):
+					self.ledControlInstance.cycleColors()
+
+			else:
+				print("Monkey is not deactivated in General Settings...")
+				self.monkeyControlInstance.monkey_on()
+				time.sleep(10) #Monkey is On for 10 seconds
+				self.monkeyControlInstance.monkey_off()
+
+			self.etsReminderThreadExit = True # Terminates the thread.
+			
+			
+
                 else:
                     print("***Do not activate monkey if presence is not detected***")
                 print("ETS REMINDER SERVICE LOOP END.....")
+
+
+		if self.isBreakScreenActive == False:
+			if self.trackingInstance.getPresenceInfo() == True:
+				self.ledControlInstance.ledOnGreen()
+			else:
+				self.ledControlInstance.ledOnRed()
                 
-                #Check every 15 seconds
-                time.sleep(2)
+		self.trackingInstance.tracking()
+                time.sleep(.05)
+
+
         except:
-            self.threadExit = True
+	    print "Unexpected error:", sys.exc_info()[0]
+	    traceback.print_exc()
+            self.allThreadExit = True
+	    self.ledControlInstance.ledOff()
+
+	print("Turning off motor...")
+	self.trackingInstance.turnMotorOff()
+	print("Motor off...")
         
-        if self.threadExit == True:
-            print("THREAD TERMIANTED...")
+        if self.allThreadExit == True:
+            print("THREAD TERMINATED...")
         else:
-            print("***ETS SIGNED***")
+            print("***ETS SERVICE ENDED...***")
         
     def breakReminderService(self):
         #Get Break Reminder Configuration
@@ -661,12 +775,12 @@ class Application(tk.Frame):
         else:
             self.breakReminderMinutes = self.savedSettings[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()]
         self.breakReminderTimeDelta = dt.timedelta(minutes=int(self.breakReminderMinutes))
-        # self.breakReminderTimeDelta = dt.timedelta(minutes=1) #only for demonstration purposes
+        #self.breakReminderTimeDelta = dt.timedelta(minutes=1) #only for demonstration purposes
         self.breakReminderTriggerTime = dt.datetime.now() + self.breakReminderTimeDelta
         
         self.breakReminderFlag = True
         try:
-            while (self.breakReminderFlag and self.threadExit == False):
+            while (self.breakReminderFlag and self.allThreadExit == False):
                 self.breakReminderCurrentTime = dt.datetime.now()
                 self.breakReminderTimeDelta = self.breakReminderTriggerTime - self.breakReminderCurrentTime
                 
@@ -680,7 +794,7 @@ class Application(tk.Frame):
                 if self.breakReminderTimeDelta.days < 0 and self.isMainScreenActive == True:
                     #Deactivate buttons on main screen
                     self.clearButton.config(state=tk.DISABLED)
-                    self.clearButton.update_idletasks
+                    self.clearButton.update_idletasks()
                     self.breakButton.config(state=tk.DISABLED)
                     self.breakButton.update_idletasks()
                     self.settingsButton.config(state=tk.DISABLED)
@@ -691,7 +805,8 @@ class Application(tk.Frame):
                     print("***BREAK REMINDER ALERT***")
                     self.numpadTextStringVar.set("Take a break!")
                     self.numpadText.update_idletasks()
-                    
+
+
                     for x in range(0,7):
                         self.numpadTextStringVar.set("Now!")
                         self.numpadText.update_idletasks()
@@ -713,25 +828,30 @@ class Application(tk.Frame):
                         numpadButton.config(state=tk.NORMAL)
                         numpadButton.update_idletasks()
                     self.breakReminderFlag = False
-                else:
-                    print("***DO NOTHING***")
-                print("BREAK REMINDER SERVICE LOOP END.....")
+                #else:
+                    #print("***DO NOTHING***")
+                #print("BREAK REMINDER SERVICE LOOP END.....")
                 
                 #Check every 1 second
-                time.sleep(2)
-        except:
-            self.threadExit = True
-        
-        if self.threadExit == True:
-            print("THREAD TERMINATED...")
-            
+		time.sleep(5)
 
+
+
+
+        except:
+	    print "Unexpected error:", sys.exc_info()[0]
+	    traceback.print_exc()
+            self.allThreadExit = True
         
+        if self.allThreadExit == True:
+            print("THREAD TERMINATED...")
+             
     
 #main program starts here
 if __name__ == '__main__':
     
     try:
+
         app = Application()
         app.master.title('Presence Indicator')
         app.mainloop() #starts application's main loop, waiting for mouse and keyboard events
@@ -742,3 +862,4 @@ if __name__ == '__main__':
 
         
         
+

@@ -42,7 +42,7 @@ class BreakTimer():
     def loadSettings(self):  
         
         #Load settings from settings.json. If the file does not exist, create settings.json.
-        if (os.path.exists("/Users/noebrito/OneDrive/Github_Pi/GUI/settings.json")): #change path when run on Pi
+        if (os.path.exists("/home/pi/pi/GUI/settings.json")): #change path when run on Pi
             with open("settings.json",'r') as settingsFile:
                 self.savedSettings = json.loads(settingsFile.readline())
                 if self.savedSettings != self.defaultSettings:
@@ -167,3 +167,4 @@ class BreakTimer():
 
     
         
+
