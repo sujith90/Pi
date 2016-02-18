@@ -110,20 +110,14 @@ class Tracking():
 		else:
 			if self.awayFlag:
 				self.awayFlag = False
-				for dc in range(20, 100, 10):
+				for dc in range(40, 120, 10):
 					print "dc: ",dc/10.0
 					self.p.ChangeDutyCycle(dc/10.0)
 					time.sleep(.2)
 					self.getTempData()
 					if max(self.temperature) > self.environment_temp:
-						print "DC: ",dc/10.0
-						print "prevDC: ",self.prevDutycycle
 						self.presenceDetected = True
 						self.awayFlag = True
-						if(dc-(self.prevDutycycle) > 4):
-							self.dutycycle = dc
-						else:
-							self.dutycycle = self.prevDutycycle
 						break
 						
 			
