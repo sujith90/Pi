@@ -152,6 +152,9 @@ class Application(tk.Frame):
         
         self.breakReminderServiceThread = threading.Thread(group=None,target=self.breakReminderService)
         self.breakReminderServiceThread.start()
+
+	global awayFlag
+	self.awayFlag = False #flag to get the monkey to clap only once
 	
 	
 	#Set LED to Green
@@ -720,11 +723,12 @@ class Application(tk.Frame):
 
 			print "timeDelta.days: "+str(self.timeDelta.days)			
 			
-			if self.timeDelta.days < 0:	#after ets limit 
+			if self.timeDelta.days <-10:	#after ets limit 
 				if self.etsSignedIntVar.get() == 1:
 					self.etsReminderThreadExit = True # Terminates the thread.
 				else:
-					if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] != "1":
+					if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] != "1" and self.awayFlag == False :
+						self.awayFlag = True
 						self.monkeyControlInstance.monkey_on()
 						#time.sleep(10) #Monkey is On for 10 seconds
 						for x in range(0,10):
@@ -745,6 +749,7 @@ class Application(tk.Frame):
 			self.ledControlInstance.ledOnGreen()
 			self.trackingInstance.tracking()
                 	time.sleep(.05)
+			self.awayFlag = False
 			
 			
 

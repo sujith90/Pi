@@ -19,6 +19,8 @@ class Tracking():
 		self.motor_movement = .25
 		self.presenceDetected = True
 		
+
+		
 		#GPIO Initializers
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setwarnings(False)
