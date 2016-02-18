@@ -658,7 +658,7 @@ class Application(tk.Frame):
             self.clearButton.config(state=tk.DISABLED)
             self.breakButton.config(state=tk.DISABLED)
             self.settingsButton.config(state=tk.DISABLED)
-	    self.ledControlInstance.led_on() #LED ON
+	    self.ledControlInstance.ledOnRed() #LED ON
             for numpadButton in self.numpad:
                 numpadButton.config(state=tk.DISABLED)
             
@@ -670,7 +670,7 @@ class Application(tk.Frame):
             self.settingsButton.config(state=tk.NORMAL)
             for numpadButton in self.numpad:
                 numpadButton.config(state=tk.NORMAL)
-            self.ledControlInstance.led_off() #LED OFF
+            self.ledControlInstance.ledoff() #LED OFF
       
       
     def eventEtsSignedCheckbox(self):
