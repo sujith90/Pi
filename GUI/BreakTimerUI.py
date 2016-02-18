@@ -106,6 +106,9 @@ class Application(tk.Frame):
 	self.ledControlInstance.init()
 
 
+	
+
+	
 	print("LED TEST...")
 	time.sleep(2)
 	print("Red...")
@@ -119,6 +122,7 @@ class Application(tk.Frame):
 	time.sleep(1)	
 	self.ledControlInstance.ledOff()
 	print("LED TEST END...")
+	
 
 	
 	#Initialize Tracking Instance
@@ -132,13 +136,16 @@ class Application(tk.Frame):
 	self.monkeyControlInstance.init()
 
 	'''
-	print("TEST MONKEY...")
-	time.sleep(3)
-	self.monkeyControlInstance.monkey_on()
-	time.sleep(3)
-	self.monkeyControlInstance.monkey_off()
-	print("TEST MONKEY END...")
+	while (True):
+		print("TEST MONKEY...")
+		time.sleep(2)
+		self.monkeyControlInstance.monkey_on()
+		time.sleep(2)
+		self.monkeyControlInstance.monkey_off()
+		time.sleep(2)
+	#print("TEST MONKEY END...")
 	'''
+	
 
 	
 	
@@ -723,7 +730,7 @@ class Application(tk.Frame):
 
 			print "timeDelta.days: "+str(self.timeDelta.days)			
 			
-			if self.timeDelta.days <-10:	#after ets limit 
+			if self.timeDelta.days < 0:	#after ets limit 
 				if self.etsSignedIntVar.get() == 1:
 					self.etsReminderThreadExit = True # Terminates the thread.
 				else:
@@ -751,13 +758,7 @@ class Application(tk.Frame):
                 	time.sleep(.05)
 			self.awayFlag = False
 			
-			
-
-
-                
-
-
-
+	
         except:
 	    print "Unexpected error:", sys.exc_info()[0]
 	    traceback.print_exc()
@@ -780,8 +781,8 @@ class Application(tk.Frame):
             self.breakReminderMinutes = "30"
         else:
             self.breakReminderMinutes = self.savedSettings[self.breakTimerInstance.getSettingsBreakReminderMinutesKey()]
-        self.breakReminderTimeDelta = dt.timedelta(minutes=int(self.breakReminderMinutes))
-        #self.breakReminderTimeDelta = dt.timedelta(minutes=1) #only for demonstration purposes
+        #self.breakReminderTimeDelta = dt.timedelta(minutes=int(self.breakReminderMinutes))
+        self.breakReminderTimeDelta = dt.timedelta(minutes=1) #only for demonstration purposes
         self.breakReminderTriggerTime = dt.datetime.now() + self.breakReminderTimeDelta
         
         self.breakReminderFlag = True
@@ -789,14 +790,14 @@ class Application(tk.Frame):
             while (self.breakReminderFlag and self.allThreadExit == False):
                 self.breakReminderCurrentTime = dt.datetime.now()
                 self.breakReminderTimeDelta = self.breakReminderTriggerTime - self.breakReminderCurrentTime
-                ''''
+                
                 #Print Current Time and Trigger Time
                 print(" ")
                 print("BREAK REMINDER SERVICE.....")
                 print("Break Reminder Current Time: " + str(self.breakReminderCurrentTime))
                 print("Break Reminder Trigger Time: " + str(self.breakReminderTriggerTime))
                 print("Break Reminder Current Time Delta: " + str(self.breakReminderTimeDelta.days))
-                '''
+                
                 if self.breakReminderTimeDelta.days < 0 and self.isMainScreenActive == True:
                     #Deactivate buttons on main screen
                     self.clearButton.config(state=tk.DISABLED)
@@ -811,18 +812,22 @@ class Application(tk.Frame):
                     print("***BREAK REMINDER ALERT***")
                     self.numpadTextStringVar.set("Take a break!")
                     self.numpadText.update_idletasks()
-
+		    if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] != "1" and self.awayFlag == False:
+			self.monkeyControlInstance.monkey_on()	
 
                     for x in range(0,7):
                         self.numpadTextStringVar.set("Now!")
                         self.numpadText.update_idletasks()
-                        time.sleep(1)
+                        self.ledControlInstance.cycleColors()
                         self.numpadTextStringVar.set("Take a break!")
                         self.numpadText.update_idletasks()
-                        time.sleep(1)
-                    self.numpadTextStringVar.set(self.breakTimerInstance.getDisplayString() + " " + "mins")
-                    self.numpadText.update_idletasks()
-                    
+			time.sleep(0.5)
+                        self.ledControlInstance.cycleColors()
+                    	self.numpadTextStringVar.set(self.breakTimerInstance.getDisplayString() + " " + "mins")
+                    	self.numpadText.update_idletasks()
+			time.sleep(0.5)
+
+                    self.monkeyControlInstance.monkey_off()
                     #Activate buttons on main screen
                     self.clearButton.config(state=tk.NORMAL)
                     self.clearButton.update_idletasks
