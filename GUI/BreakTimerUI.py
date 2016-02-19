@@ -107,16 +107,16 @@ class Application(tk.Frame):
 
 
 	print("LED TEST...")
-	time.sleep(3)
+	time.sleep(2)
 	print("Red...")
 	self.ledControlInstance.ledOnRed()
-	time.sleep(2)
+	time.sleep(1)
 	print("Green...")
 	self.ledControlInstance.ledOnGreen()
-	time.sleep(2)
+	time.sleep(1)
 	print("Blue...")
 	self.ledControlInstance.ledOnBlue()
-	time.sleep(2)	
+	time.sleep(1)	
 	self.ledControlInstance.ledOff()
 	print("LED TEST END...")
 
@@ -152,6 +152,9 @@ class Application(tk.Frame):
         
         self.breakReminderServiceThread = threading.Thread(group=None,target=self.breakReminderService)
         self.breakReminderServiceThread.start()
+
+	global awayFlag
+	self.awayFlag = False #flag to get the monkey to clap only once
 	
 	
 	#Set LED to Green
@@ -703,7 +706,7 @@ class Application(tk.Frame):
                 self.timeDelta = self.triggerTime-self.currentTime
 		
                 #print current time and trigger time
-		
+		'''
                 print(" ")
                 print("ETS REMINDER SERVICE.....")
                 print("Settings Leaving Time: " + self.leavingTimeFormatted)
@@ -712,44 +715,47 @@ class Application(tk.Frame):
                 print("Trigger Time: " + str(self.triggerTime))
                 print("Time Delta: " + str(self.timeDelta.days))
                 
+		'''
+		
+		print("Presence Detected? " + str(self.trackingInstance.getPresenceInfo()))
+		
+		if self.trackingInstance.getPresenceInfo() == False:
 
-
-
-
-                if self.timeDelta.days < 0:
-                    print("***Activate monkey if presence not detected***")
-		    print("Presence Detected? " + str(self.trackingInstance.getPresenceInfo()))
-		    if self.trackingInstance.getPresenceInfo() == False:
-			#Don't activate monkey if configured in General Settings. Flash LEDs instead.
-
-			if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] == "1":
-				print("Monkey is deactivated in General Settings...")
-				for x in range(0,10):
-					self.ledControlInstance.cycleColors()
-
-			else:
-				print("Monkey is not deactivated in General Settings...")
-				self.monkeyControlInstance.monkey_on()
-				time.sleep(10) #Monkey is On for 10 seconds
-				self.monkeyControlInstance.monkey_off()
-
-			self.etsReminderThreadExit = True # Terminates the thread.
+			print "timeDelta.days: "+str(self.timeDelta.days)			
 			
-			
+			if self.timeDelta.days <-10:	#after ets limit 
+				if self.etsSignedIntVar.get() == 1:
+					self.etsReminderThreadExit = True # Terminates the thread.
+				else:
+					if self.savedSettings[self.breakTimerInstance.getSettingsDeactivateMonkeyKey()] != "1" and self.awayFlag == False :
+						self.awayFlag = True
+						self.monkeyControlInstance.monkey_on()
+						#time.sleep(10) #Monkey is On for 10 seconds
+						for x in range(0,10):
+							self.ledControlInstance.cycleColors()
+						self.monkeyControlInstance.monkey_off()
+					else:
+						for x in range(0,10):
+							self.ledControlInstance.cycleColors()
+					self.ledControlInstance.ledOnRed()
+						
 
-                else:
-                    print("***Do not activate monkey if presence is not detected***")
-                print("ETS REMINDER SERVICE LOOP END.....")
-
-
-		if self.isBreakScreenActive == False:
-			if self.trackingInstance.getPresenceInfo() == True:
-				self.ledControlInstance.ledOnGreen()
 			else:
 				self.ledControlInstance.ledOnRed()
+				
+
+			
+		else:
+			self.ledControlInstance.ledOnGreen()
+			self.trackingInstance.tracking()
+                	time.sleep(.05)
+			self.awayFlag = False
+			
+			
+
+
                 
-		self.trackingInstance.tracking()
-                time.sleep(.05)
+
 
 
         except:
@@ -783,14 +789,14 @@ class Application(tk.Frame):
             while (self.breakReminderFlag and self.allThreadExit == False):
                 self.breakReminderCurrentTime = dt.datetime.now()
                 self.breakReminderTimeDelta = self.breakReminderTriggerTime - self.breakReminderCurrentTime
-                
+                ''''
                 #Print Current Time and Trigger Time
                 print(" ")
                 print("BREAK REMINDER SERVICE.....")
                 print("Break Reminder Current Time: " + str(self.breakReminderCurrentTime))
                 print("Break Reminder Trigger Time: " + str(self.breakReminderTriggerTime))
                 print("Break Reminder Current Time Delta: " + str(self.breakReminderTimeDelta.days))
-                
+                '''
                 if self.breakReminderTimeDelta.days < 0 and self.isMainScreenActive == True:
                     #Deactivate buttons on main screen
                     self.clearButton.config(state=tk.DISABLED)
@@ -833,7 +839,7 @@ class Application(tk.Frame):
                 #print("BREAK REMINDER SERVICE LOOP END.....")
                 
                 #Check every 1 second
-		time.sleep(5)
+		time.sleep(10)
 
 
 

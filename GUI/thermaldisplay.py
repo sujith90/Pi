@@ -11,12 +11,15 @@ class Tracking():
 		print "\n\ntracking init started...\n\n"
 		
 		self.omron = OmronD6T(arraySize=16)
-		
+		self.temperature = []
 		self.time_delay = .1 #
-		self.temp_difference = 10 # Temp difference bet
+		self.environment_temp = 75 # Temp difference bet
+		self.temp_difference = 5
 		self.prev_temp_diff =  0 #PID's I value
-		
+		self.motor_movement = .25
 		self.presenceDetected = True
+		
+
 		
 		#GPIO Initializers
 		GPIO.setmode(GPIO.BCM)
@@ -96,7 +99,16 @@ class Tracking():
 	    self.setDutyCycle(row)
 
 	def getPresenceInfo(self):
+		self.getTempData()
+		if max(self.temperature) > self.environment_temp:
+			self.presenceDetected = True
+		else:
+			self.presenceDetected = False
 		return self.presenceDetected
+	
+	def getTempData(self):
+		self.temperature = list(self.omron.read())[1]
+		#print self.temperature
 
 	def turnMotorOff(self):
 		GPIO.output(18,1)
@@ -131,10 +143,10 @@ class Tracking():
 	
 
 		if(DC > 3.00 and max_index != 1 and max_index != 2 ):
-			self.dutycycle = self.dutycycle + .1
+			self.dutycycle = self.dutycycle + self.motor_movement
 			self.p.ChangeDutyCycle(self.dutycycle)
 		elif(DC < 2.0 and max_index != 1 and max_index != 2 ):
-			self.dutycycle = self.dutycycle - .1
+			self.dutycycle = self.dutycycle - self.motor_movement
 			self.p.ChangeDutyCycle(self.dutycycle)
 		'''
 		else:
@@ -154,13 +166,14 @@ class Tracking():
 
 		print("In Tracking")
 		#while self.threadExit == False:
-		self.temperature = list(self.omron.read())[1]
-		#print " ", ["%.2f" % member for member in self.temperature]
+		self.getTempData()
+		#print self.temperature
 
 		#Can this calculation be done before the loop? BP
-		if max(self.temperature) > 70:
+		if max(self.temperature) > self.environment_temp:
 			self.presenceDetected = True
 			self.maxCell = self.temperature.index(max(self.temperature))
+			#print "maxcell: "+str(self.maxCell)
 			self.function[(self.maxCell+1)%4]()
 		else:
 			self.presenceDetected = False
