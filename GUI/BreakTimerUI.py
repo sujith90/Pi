@@ -748,12 +748,14 @@ class Application(tk.Frame):
 						
 
 			else:
-				self.ledControlInstance.ledOnRed()
+				if self.manualIndicatorIntVar.get() != 1 and self.isBreakScreenActive == False:
+					self.ledControlInstance.ledOnRed()
 				
 
 			
 		else:
-			self.ledControlInstance.ledOnGreen()
+			if self.manualIndicatorIntVar.get() != 1 and self.isBreakScreenActive == False:
+				self.ledControlInstance.ledOnGreen()
 			self.trackingInstance.tracking()
                 	time.sleep(.05)
 			self.awayFlag = False
