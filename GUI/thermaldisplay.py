@@ -13,7 +13,7 @@ class Tracking():
 		self.omron = OmronD6T(arraySize=16)
 		self.temperature = []
 		self.time_delay = .1 #
-		self.environment_temp = 70 # Temp difference bet
+		self.environment_temp = 75 # Temp difference bet
 		self.temp_difference = 10
 		self.prev_temp_diff =  0 #PID's I value
 		self.motor_movement = .25
@@ -37,6 +37,19 @@ class Tracking():
 		self.prevDutycycle = 7
 		self.maxCell = -1
 		self.p.start(0)
+		
+		'''
+		for dc in range(20, 120, 5):
+			print "dc: ",dc/10.0
+			self.p.ChangeDutyCycle(dc/10.0)
+			time.sleep(.25)
+			self.getTempData()
+			if (self.environment_temp-min(self.temperature)) > 5:
+				self.environment_temp = self.environment_temp-1
+			elif (self.environment_temp-min(self.temperature)) < 5:
+				self.environment_temp = self.environment_temp+1
+		
+		'''
 				
 		for dc in range(20, 120, 10):
 			print "dc: ",dc/10.0
