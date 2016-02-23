@@ -14,7 +14,7 @@ class Tracking():
 		self.temperature = []
 		self.time_delay = .1 #
 		self.environment_temp = 75 # Temp difference bet
-		self.temp_difference = 10
+		self.temp_difference = 5
 		self.prev_temp_diff =  0 #PID's I value
 		self.motor_movement = .25
 		self.presenceDetected = True
